@@ -1,0 +1,20 @@
+{
+    "name": "想我了吧",
+    "short_name": "想我了吧",
+    "description": "温柔的自用情感支持小应用：每日打卡 + 本地语料 + 定时关心",
+    "lang": "zh-CN",
+    "start_url": "./mood.html",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0f1117",
+    "theme_color": "#0f1117",
+    "icons": [
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

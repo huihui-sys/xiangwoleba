@@ -1,0 +1,65 @@
+name: Build Android APK
+
+# 手动点按钮就能打包，也可以推 mood.html 时自动打包
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'mood.html'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'scripts/**'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v7
+
+      - name: 装 Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: 装 JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 装 Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.0.0
+
+      - name: 装依赖
+        run: npm install --no-audit --no-fund
+
+      - name: 自检（语法 + 纯逻辑测试）
+        run: npm test
+
+      - name: 组装 www/
+        run: node scripts/build-www.js
+
+      - name: 生成 Android 工程
+        run: npx cap add android
+
+      - name: 应用 Android 补丁（权限 / 应用名）
+        run: node scripts/patch-android.js
+
+      - name: 同步网页资源到工程
+        run: npx cap sync android
+
+      - name: 打 debug APK
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: xwlb-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30

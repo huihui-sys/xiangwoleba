@@ -1,0 +1,13 @@
+# 依赖
+node_modules/
+
+# Capacitor 打包中间产物（由 scripts/build-www.js 生成）
+www/
+
+# Android 原生工程由 `npx cap add android` 生成，不入库
+android/
+
+# 其它
+.DS_Store
+Thumbs.db
+*.log

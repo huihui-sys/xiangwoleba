@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="theme-color" content="#0f1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>想我了吧</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <style>
+        :root {
+            --bg: #0f1117;
+            --card: #1b1f2b;
+            --card2: #212636;
+            --line: #2a3040;
+            --fg: #eef1f7;
+            --fg2: #98a1b4;
+            --fg3: #6d768a;
+            --accent: #ff6f91;
+            --accent2: #ffb26b;
+            --ok: #5bcf9b;
+            --warn: #ffd166;
+            --radius: 16px;
+            --radius-s: 12px;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body { margin: 0; padding: 0; }
+        body {
+            background: radial-gradient(1200px 620px at 50% -12%, #2b2036 0%, var(--bg) 58%) no-repeat fixed;
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            padding-bottom: calc(78px + env(safe-area-inset-bottom));
+            min-height: 100vh;
+            overscroll-behavior-y: none;
+        }
+        h1, h2, h3, p { margin: 0; }
+        button, input, textarea, select {
+            font-family: inherit;
+            font-size: 16px;
+            color: inherit;
+        }
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+            background: rgba(15, 17, 23, .82);
+            backdrop-filter: saturate(160%) blur(14px);
+            -webkit-backdrop-filter: saturate(160%) blur(14px);
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .brand {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: .5px;
+            background: linear-gradient(92deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 45vw;
+        }
+        .chip {
+            font-size: 12px;
+            color: var(--fg2);
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 4px 10px;
+            white-space: nowrap;
+        }
+        .topbar .right { display: flex; gap: 6px; align-items: center; }
+        main { padding: 14px 14px 8px; }
+        .view { display: none; animation: fade .22s ease; }
+        .view.active { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .card {
+            background: linear-gradient(180deg, var(--card2), var(--card));
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .sec-title {
+            font-size: 13px;
+            color: var(--fg2);
+            margin: 18px 4px 8px;
+            letter-spacing: .4px;
+        }
+        .row { display: flex; align-items: center; gap: 10px; }
+        .row.between { justify-content: space-between; }
+        .row.wrap { flex-wrap: wrap; }
+        .grow { flex: 1; min-width: 0; }
+        .muted { color: var(--fg2); font-size: 13px; }
+        .tiny { color: var(--fg3); font-size: 12px; }
+        button {
+            border: 1px solid var(--line);
+            background: var(--card);
+            border-radius: var(--radius-s);
+            padding: 11px 14px;
+            cursor: pointer;
+            transition: transform .08s ease, background .15s ease;
+            user-select: none;
+        }
+        button:active { transform: scale(.97); }
+        button.primary {
+            background: linear-gradient(92deg, var(--accent), var(--accent2));
+            border-color: transparent;
+            color: #2a1620;
+            font-weight: 700;
+            box-shadow: 0 6px 18px -8px var(--accent);
+        }
+        button.ghost { background: transparent; }
+        button.small { padding: 7px 10px; font-size: 13px; border-radius: 10px; }
+        button.danger { color: #ff8f9c; }
+        button.block { width: 100%; }
+        button[disabled] { opacity: .45; }
+        input[type="text"], input[type="time"], input[type="number"], textarea, select {
+            width: 100%;
+            background: #11141d;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-s);
+            padding: 11px 12px;
+            outline: none;
+        }
+        input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 130px; line-height: 1.75; }
+        .switch { position: relative; width: 50px; height: 29px; flex: 0 0 auto; }
+        .switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; z-index: 2; }
+        .switch i { position: absolute; inset: 0; background: #333a4d; border-radius: 999px; transition: .2s; }
+        .switch i::after {
+            content: ""; position: absolute; width: 23px; height: 23px; border-radius: 50%;
+            background: #fff; top: 3px; left: 3px; transition: .2s;
+        }
+        .switch input:checked + i { background: linear-gradient(92deg, var(--accent), var(--accent2)); }
+        .switch input:checked + i::after { transform: translateX(21px); }
+        /* ---- 今日卡片 ---- */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            padding: 30px 18px 22px;
+            background: linear-gradient(160deg, #2a2036 0%, var(--card) 62%);
+        }
+        .hero::after {
+            content: "";
+            position: absolute; width: 190px; height: 190px; right: -70px; top: -80px;
+            background: radial-gradient(circle, rgba(255, 111, 145, .4), transparent 68%);
+        }
+        .hero .cat-tag {
+            display: inline-block; font-size: 12px; color: var(--accent2);
+            border: 1px solid rgba(255, 178, 107, .4); border-radius: 999px; padding: 3px 10px;
+        }
+        .hero .sentence {
+            font-size: 23px;
+            font-weight: 600;
+            line-height: 1.65;
+            letter-spacing: .5px;
+            margin: 18px 2px 22px;
+            min-height: 76px;
+            display: flex; align-items: center; justify-content: center;
+            word-break: break-word;
+        }
+        .hero .actions { display: flex; gap: 10px; }
+        .hero .actions button { flex: 1; }
+        .catfilter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .catfilter button.on {
+            border-color: var(--accent); color: var(--accent); font-weight: 600;
+            background: rgba(255, 111, 145, .1);
+        }
+        .hist-item {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 10px 0; border-bottom: 1px dashed var(--line);
+        }
+        .hist-item:last-child { border-bottom: 0; }
+        .hist-item .t { font-size: 14px; }
+        /* ---- 打卡 ---- */
+        .moods { display: flex; gap: 8px; justify-content: space-between; }
+        .moods button { flex: 1; padding: 12px 0 8px; text-align: center; border-radius: 14px; line-height: 1.25; }
+        .moods button .e { display: block; font-size: 26px; }
+        .moods button .l { display: block; font-size: 11px; color: var(--fg2); margin-top: 2px; }
+        .moods button.on { border-color: var(--accent); background: rgba(255, 111, 145, .12); }
+        .moods button.on .l { color: var(--accent); }
+        .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tags button { padding: 7px 11px; font-size: 13px; border-radius: 999px; }
+        .tags button.on { border-color: var(--accent2); color: var(--accent2); background: rgba(255, 178, 107, .1); }
+        .bars { display: flex; gap: 6px; align-items: flex-end; height: 92px; margin: 6px 0 4px; }
+        .bars .b { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+        .bars .b i {
+            display: block; border-radius: 6px 6px 3px 3px; min-height: 4px;
+            background: linear-gradient(180deg, var(--accent), rgba(255, 111, 145, .25));
+        }
+        .bars .b.none i { background: #2c3244; }
+        .bars .b span { text-align: center; font-size: 11px; color: var(--fg3); margin-top: 6px; }
+        /* ---- 句子列表 ---- */
+        .sent {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 11px 0; border-bottom: 1px solid var(--line);
+        }
+        .sent:last-child { border-bottom: 0; }
+        .sent .txt { flex: 1; font-size: 15px; word-break: break-word; }
+        .sent .meta { font-size: 11px; color: var(--fg3); margin-top: 3px; }
+        .fav-star { color: var(--warn); }
+        .long { color: var(--warn); }
+        /* ---- 底部导航 ---- */
+        .tabbar {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+            display: flex;
+            padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+            background: rgba(15, 17, 23, .93);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid var(--line);
+        }
+        .tabbar button {
+            flex: 1; border: 0; background: transparent; border-radius: 12px;
+            color: var(--fg3); font-size: 11px; padding: 6px 0 5px; line-height: 1.35;
+        }
+        .tabbar button .e { display: block; font-size: 20px; }
+        .tabbar button.on { color: var(--accent); background: rgba(255, 111, 145, .09); }
+        /* ---- 弹层 / 提示 ---- */
+        .mask {
+            position: fixed; inset: 0; z-index: 60; background: rgba(6, 8, 12, .66);
+            display: none; align-items: flex-end;
+        }
+        .mask.show { display: flex; }
+        .sheet {
+            width: 100%; max-height: 92vh; overflow-y: auto;
+            background: var(--card); border-radius: 20px 20px 0 0;
+            border-top: 1px solid var(--line);
+            padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+            animation: up .24s ease;
+        }
+        @keyframes up { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+        .sheet h3 { font-size: 16px; margin-bottom: 4px; }
+        .toast {
+            position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom));
+            transform: translateX(-50%);
+            background: rgba(40, 46, 62, .97); color: #fff;
+            padding: 10px 16px; border-radius: 999px; font-size: 14px;
+            z-index: 90; opacity: 0; pointer-events: none; transition: .25s;
+            max-width: 84vw; text-align: center;
+        }
+        .toast.show { opacity: 1; bottom: calc(108px + env(safe-area-inset-bottom)); }
+        .guide { font-size: 14px; color: var(--fg2); line-height: 1.85; }
+        .guide b { color: var(--fg); }
+        .kv { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+        .kv:last-child { border-bottom: 0; }
+        .kv span:last-child { color: var(--fg2); }
+        .dev-note { font-size: 12px; color: var(--fg3); margin-top: 6px; }
+        #selftest {
+            position: fixed; inset: 0; z-index: 200; overflow: auto; padding: 16px;
+            background: #0b0d13; font-family: Consolas, Menlo, monospace; font-size: 12px;
+            white-space: pre-wrap; line-height: 1.6; display: none;
+        }
+        #selftest.show { display: block; }
+        #selftest .ok { color: #6ee7a8; }
+        #selftest .bad { color: #ff8f9c; }
+    </style>
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand" id="appBrand">想我了吧</div>
+        <div class="right">
+            <span class="chip" id="chipStreak">连续 0 天</span>
+            <span class="chip" id="chipMood">今天还没打卡</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- ============ 今天 ============ -->
+        <section class="view active" id="view-today">
+            <div class="card hero">
+                <span class="cat-tag" id="cardCat">陪伴</span>
+                <p class="sentence" id="cardText">加载中…</p>
+                <div class="actions">
+                    <button class="primary" id="btnNext">再给我一句</button>
+                    <button class="ghost" id="btnFav">收藏</button>
+                </div>
+                <div class="row" style="margin-top:10px">
+                    <button class="ghost small grow" id="btnCopy">复制这句</button>
+                    <button class="ghost small grow" id="btnShare">分享</button>
+                    <button class="ghost small grow" id="btnAddMine">存为我的</button>
+                </div>
+            </div>
+
+            <div class="catfilter" id="catFilter"></div>
+
+            <div class="card">
+                <div class="row between">
+                    <span class="muted">下次主动找你</span>
+                    <span class="chip" id="nextHint">—</span>
+                </div>
+                <div class="dev-note" id="schedNote"></div>
+            </div>
+
+            <div class="sec-title">最近的几句</div>
+            <div class="card" id="recentList"><span class="muted">还没有记录</span></div>
+        </section>
+
+        <!-- ============ 打卡 ============ -->
+        <section class="view" id="view-checkin">
+            <div class="card">
+                <div class="row between">
+                    <span class="muted" id="todayLabel">今天</span>
+                    <span class="chip" id="moodSaved">未打卡</span>
+                </div>
+                <div class="moods" id="moodPicker" style="margin-top:12px"></div>
+            </div>
+
+            <div class="card">
+                <div class="muted" style="margin-bottom:8px">今天是因为什么？（可多选，也可以不选）</div>
+                <div class="tags" id="tagBox"></div>
+            </div>
+
+            <div class="card">
+                <div class="muted" style="margin-bottom:8px">想对自己说点什么？（选填）</div>
+                <textarea id="moodNote" rows="3" placeholder="今天有点累，但事情都做完了"></textarea>
+                <button class="primary block" id="btnSaveMood" style="margin-top:12px">保存今天的心情</button>
+                <div class="dev-note">心情会影响 App 主动找你说什么：低落时多安慰陪伴，开心时多夸夸你。</div>
+            </div>
+
+            <div class="sec-title">最近 7 天</div>
+            <div class="card">
+                <div class="bars" id="trendBars"></div>
+                <div class="row between" style="margin-top:8px">
+                    <span class="muted" id="trendStat">—</span>
+                    <button class="ghost small" id="btnMoodHistory">全部记录</button>
+                </div>
+            </div>
+        </section>
+        <!-- ============ 我的句子 ============ -->
+        <section class="view" id="view-sentences">
+            <div class="row" style="gap:8px;margin-bottom:10px">
+                <button class="primary grow" id="btnBulkAdd">批量导入</button>
+                <button class="grow" id="btnNewOne">加一条</button>
+            </div>
+            <div class="row" style="gap:8px;margin-bottom:10px">
+                <button class="small grow" id="btnExport">导出备份</button>
+                <button class="small grow" id="btnImport">导入备份</button>
+                <button class="small grow danger" id="btnClearBuiltin">清空内置</button>
+            </div>
+            <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+
+            <div class="catfilter" id="sentFilter"></div>
+
+            <div class="card">
+                <div class="row between" style="margin-bottom:6px">
+                    <span class="muted" id="sentCount">共 0 条</span>
+                    <span class="tiny" id="sentHint">点句子可编辑</span>
+                </div>
+                <div id="sentList"><span class="muted">还没有句子，点上面的「批量导入」一次性加一堆吧</span></div>
+            </div>
+        </section>
+
+        <!-- ============ 设置 ============ -->
+        <section class="view" id="view-settings">
+            <div class="card">
+                <div class="muted" style="margin-bottom:8px">应用名字</div>
+                <input type="text" id="setAppName" maxlength="12" placeholder="想我了吧">
+                <div class="dev-note">改名后需要重新打包 App 才会更新图标名，网页版立即生效。</div>
+            </div>
+
+            <div class="card">
+                <div class="row between">
+                    <div class="grow">
+                        <div>每天最多几句</div>
+                        <div class="dev-note">建议 3~5 句，太多会烦</div>
+                    </div>
+                    <input type="number" id="setDailyMax" min="1" max="12" style="width:84px;text-align:center">
+                </div>
+            </div>
+
+            <div class="sec-title">主动找你的时间段（在时段内随机时刻发送）</div>
+            <div class="card" id="windowList"></div>
+            <button class="block small" id="btnAddWindow">+ 加一个时间段</button>
+
+            <div class="card" style="margin-top:12px">
+                <div class="row between">
+                    <div class="grow">
+                        <div>安静时段（不打扰）</div>
+                        <div class="dev-note">这段时间不会发任何消息</div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:10px">
+                    <input type="time" id="setQuietS">
+                    <span class="muted">到</span>
+                    <input type="time" id="setQuietE">
+                </div>
+            </div>
+
+            <div class="sec-title">通知</div>
+            <div class="card">
+                <div class="row between">
+                    <div class="grow">开启通知</div>
+                    <div class="switch"><input type="checkbox" id="setNotify"><i></i></div>
+                </div>
+                <div class="row between" style="margin-top:12px">
+                    <div class="grow">震动</div>
+                    <div class="switch"><input type="checkbox" id="setVibrate"><i></i></div>
+                </div>
+                <div class="row between" style="margin-top:12px">
+                    <div class="grow">提示音（App 内）</div>
+                    <div class="switch"><input type="checkbox" id="setSound"><i></i></div>
+                </div>
+                <button class="block small" id="btnTestNotify" style="margin-top:12px">发一条测试通知</button>
+                <div class="dev-note" id="notifyState"></div>
+            </div>
+
+            <div class="sec-title">数据</div>
+            <div class="card">
+                <div class="kv"><span>句子总数</span><span id="statSent">0</span></div>
+                <div class="kv"><span>打卡天数</span><span id="statDays">0</span></div>
+                <div class="kv"><span>已收到的句子</span><span id="statLog">0</span></div>
+                <div class="kv"><span>下次提醒</span><span id="statNext">—</span></div>
+            </div>
+            <div class="row" style="gap:8px;margin-bottom:12px">
+                <button class="small grow" id="btnExport2">导出备份</button>
+                <button class="small grow danger" id="btnReset">清空全部数据</button>
+            </div>
+            <button class="block small" id="btnGuide">安装与保活指引（安卓必看）</button>
+            <div class="tiny" style="text-align:center;margin:14px 0 6px">数据只存在这台设备上 · v1.0</div>
+        </section>
+    </main>
+
+    <nav class="tabbar" id="tabbar">
+        <button data-tab="today" class="on"><span class="e">💬</span>今天</button>
+        <button data-tab="checkin"><span class="e">🙂</span>打卡</button>
+        <button data-tab="sentences"><span class="e">📝</span>句子</button>
+        <button data-tab="settings"><span class="e">⚙️</span>设置</button>
+    </nav>
+
+    <div class="mask" id="sheetMask"><div class="sheet" id="sheetBody"></div></div>
+    <div class="toast" id="toast"></div>
+    <div id="selftest"></div>
+    </main>
+    <script>
+        /* ==== PURE_ENGINE_START ==== */
+        /* 纯逻辑区：不碰 DOM、不碰 localStorage，可被 scripts/selftest.js 抽到 Node 里跑 */
+
+        /* 四个大类：改这里就能增删类目 */
+        var CATS = [
+            { key: 'comfort', name: '安慰', emoji: '🫂' },
+            { key: 'encourage', name: '鼓励', emoji: '💪' },
+            { key: 'praise', name: '夸赞', emoji: '✨' },
+            { key: 'company', name: '陪伴', emoji: '🌙' }
+        ];
+
+        /* 内置语料：只有一点点，随便删，自己加 */
+        var BUILTIN = {
+            comfort: [
+                '今天很难，但你撑过来了。',
+                '难过就难过一会儿，不着急好。',
+                '你不用解释，我懂。',
+                '做不到也没关系，真的。',
+                '抱一下，什么都不用说。',
+                '这件事不怪你，一点都怪不着。',
+                '累不是你的错，是事情太多了。',
+                '想哭就哭，我陪着你。',
+                '慢一点也没关系，我等你。'
+            ],
+            encourage: [
+                '你已经走了很远了。',
+                '先做五分钟，剩下交给惯性。',
+                '不用准备好才开始，开始了才会好。',
+                '你比昨天更能扛一点了。',
+                '慢也算前进，别急着否定自己。',
+                '今天做完一件事，就算赢。',
+                '你不是不行，你只是累了。',
+                '深呼吸，一步一步来就行。',
+                '明天再说的事，今天别背。'
+            ],
+            praise: [
+                '你今天好厉害，我看见了。',
+                '你认真起来，真好看。',
+                '这事只有你能做得这么细。',
+                '你说话算数的样子，很棒。',
+                '你比你以为的强多了。',
+                '今天也稳稳地撑住了，厉害。',
+                '你总能想到别人想不到的。',
+                '这么难的事，你居然做成了。',
+                '你有在进步，肉眼可见。'
+            ],
+            company: [
+                '我一直在，别忘了。',
+                '现在这份安静，我陪你待着。',
+                '不想说话也行，我在旁边。',
+                '睡吧，我守着今晚。',
+                '有我在，你可以放心软下来。',
+                '一个人的时候，也算有我。',
+                '想我了吧？我也想你了。',
+                '抬头看看月亮，我们看同一个。',
+                '随时找我，我不嫌你烦。'
+            ]
+        };
+        /* 心情 × 分类 权重（心情 1~2 低落 / 3 一般 / 4~5 不错） */
+        var MOOD_W = {
+            low: { comfort: 35, company: 25, encourage: 25, praise: 15 },
+            mid: { comfort: 25, company: 25, encourage: 25, praise: 25 },
+            high: { comfort: 15, company: 20, encourage: 30, praise: 35 }
+        };
+
+        var COOL_MS = 7 * 24 * 3600 * 1000; /* 同一句 7 天内不重复 */
+        var RECENT_N = 8;                   /* 最近 8 条不重复 */
+        var LONG_LEN = 60;                  /* 超过这个字数算长句（只提示，不拦） */
+        var MOOD_FACES = [
+            { v: 1, e: '😞', l: '很差' },
+            { v: 2, e: '😔', l: '低落' },
+            { v: 3, e: '😐', l: '一般' },
+            { v: 4, e: '🙂', l: '不错' },
+            { v: 5, e: '😄', l: '很好' }
+        ];
+        var MOOD_TAGS = ['累', '烦躁', '委屈', '迷茫', 'emo', '有压力', '顺利', '被夸', '想休息', '开心'];
+
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+        function catName(key) {
+            for (var i = 0; i < CATS.length; i++) { if (CATS[i].key === key) { return CATS[i].name; } }
+            return '句子';
+        }
+        function catEmoji(key) {
+            for (var i = 0; i < CATS.length; i++) { if (CATS[i].key === key) { return CATS[i].emoji; } }
+            return '💬';
+        }
+        function dateKey(ts) {
+            var d = new Date(ts);
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+        }
+        function hhmmToMin(s) {
+            var p = String(s || '').split(':');
+            var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+            if (isNaN(h)) { h = 0; }
+            if (isNaN(m)) { m = 0; }
+            return Math.max(0, Math.min(1439, h * 60 + m));
+        }
+        function minToHHMM(min) {
+            min = ((min % 1440) + 1440) % 1440;
+            return pad2(Math.floor(min / 60)) + ':' + pad2(min % 60);
+        }
+        function randInt(n) { return Math.floor(Math.random() * n); }
+
+        /* 展开内置语料 -> 句子对象 */
+        function expandBuiltin() {
+            var out = [];
+            for (var c in BUILTIN) {
+                if (!Object.prototype.hasOwnProperty.call(BUILTIN, c)) { continue; }
+                for (var i = 0; i < BUILTIN[c].length; i++) {
+                    out.push({ id: 'b.' + c + '.' + i, cat: c, text: BUILTIN[c][i], builtin: true, fav: false, at: 0 });
+                }
+            }
+            return out;
+        }
+
+        function moodOf(state, ts) {
+            var r = state.records[dateKey(ts)];
+            return (r && r.mood) ? r.mood : 0;
+        }
+        function moodBand(state, ts) {
+            var m = moodOf(state, ts);
+            if (!m) { return 'mid'; }
+            if (m <= 2) { return 'low'; }
+            if (m >= 4) { return 'high'; }
+            return 'mid';
+        }
+        /* 从昨天往前数：连续低落天数 / 连续开心天数 */
+        function moodStreak(state, ts, low) {
+            var n = 0, d = new Date(ts);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - 1);
+            for (var i = 0; i < 60; i++) {
+                var m = moodOf(state, d.getTime());
+                if (!m) { break; }
+                var hit = low ? (m <= 2) : (m >= 4);
+                if (!hit) { break; }
+                n++;
+                d.setDate(d.getDate() - 1);
+            }
+            return n;
+        }
+        function weightedPick(w) {
+            var total = 0, k;
+            for (k in w) { if (w[k] > 0) { total += w[k]; } }
+            if (total <= 0) { return CATS[randInt(CATS.length)].key; }
+            var r = Math.random() * total;
+            for (k in w) {
+                if (w[k] <= 0) { continue; }
+                r -= w[k];
+                if (r <= 0) { return k; }
+            }
+            return CATS[0].key;
+        }
+        /* 选分类：心情 + 时间段 + 连续低落/开心 + 避免同分类连发 */
+        function pickCat(state, ts) {
+            var base = MOOD_W[moodBand(state, ts)];
+            var h = new Date(ts).getHours();
+            var lowDays = moodStreak(state, ts, true);
+            var highDays = moodStreak(state, ts, false);
+            var lastCat = (state.log.length ? state.log[state.log.length - 1].cat : '');
+            var w = {}, i, c;
+            for (i = 0; i < CATS.length; i++) {
+                c = CATS[i].key;
+                var v = base[c] || 0;
+                if (h < 6) { if (c === 'company') { v *= 1.5; } if (c === 'encourage') { v *= 0.6; } }
+                else if (h < 10) { if (c === 'encourage') { v *= 1.35; } if (c === 'praise') { v *= 1.15; } }
+                else if (h >= 22) { if (c === 'company') { v *= 1.5; } if (c === 'comfort') { v *= 1.1; } }
+                if (lowDays >= 3) { if (c === 'comfort') { v *= 1.6; } if (c === 'company') { v *= 1.3; } if (c === 'praise') { v *= 0.35; } }
+                if (highDays >= 3) { if (c === 'praise') { v *= 1.35; } }
+                if (lastCat && lastCat === c) { v *= 0.55; }
+                w[c] = v;
+            }
+            return weightedPick(w);
+        }
+        function recentIds(state, n) {
+            var out = [];
+            for (var i = state.log.length - 1; i >= 0 && out.length < n; i--) { out.push(state.log[i].sid); }
+            return out;
+        }
+        /* 选句子：先按冷却 + 最近记录过滤，池子太小就放宽；没句子时返回 null */
+        function pickSentence(state, opts) {
+            opts = opts || {};
+            var ts = opts.ts || Date.now();
+            var cat = opts.cat || pickCat(state, ts);
+            var recent = opts.excludeIds || recentIds(state, RECENT_N);
+            var all = state.sentences.filter(function (s) { return !!s.text; });
+            if (!all.length) { return null; }
+            var cands = all.filter(function (s) { return s.cat === cat; });
+            var pool = cands.length ? cands : all;
+            var hard = pool.filter(function (s) {
+                return recent.indexOf(s.id) < 0 && !(state.cooldown[s.id] && ts - state.cooldown[s.id] < COOL_MS);
+            });
+            if (!hard.length) { hard = pool.filter(function (s) { return recent.indexOf(s.id) < 0; }); }
+            if (!hard.length) { hard = pool; }
+            var favs = hard.filter(function (s) { return s.fav; });
+            if (favs.length && Math.random() < 0.3) { return favs[randInt(favs.length)]; }
+            return hard[randInt(hard.length)];
+        }
+        /* 某个分钟是否落在安静时段内（支持跨零点） */
+        function inQuiet(quiet, min) {
+            if (!quiet || !quiet.s || !quiet.e) { return false; }
+            var s = hhmmToMin(quiet.s), e = hhmmToMin(quiet.e);
+            if (s === e) { return false; }
+            return s < e ? (min >= s && min < e) : (min >= s || min < e);
+        }
+        /* 生成未来 days 天的计划：随机时刻 + 预先生成好内容（App 靠它排系统通知） */
+        function buildPlan(state, nowTs, days, rand) {
+            rand = rand || Math.random;
+            var st = state.settings, out = [], used = [], d, i;
+            var wins = st.windows.filter(function (w) { return w && w.s && w.e && hhmmToMin(w.e) > hhmmToMin(w.s); });
+            for (d = 0; d < days; d++) {
+                if (!wins.length) { break; }
+                var day = new Date(nowTs);
+                day.setDate(day.getDate() + d);
+                day.setHours(0, 0, 0, 0);
+                var total = Math.min(st.dailyMax, wins.length * 2);
+                for (i = 0; i < total; i++) {
+                    var w = wins[i % wins.length];
+                    var s = hhmmToMin(w.s), e = hhmmToMin(w.e);
+                    var min = s + Math.floor(rand() * (e - s));
+                    if (inQuiet(st.quiet, min)) { continue; }
+                    var at = day.getTime() + min * 60000 + Math.floor(rand() * 60) * 1000;
+                    if (at <= nowTs + 60000) { continue; }
+                    out.push(at);
+                }
+            }
+            out.sort(function (a, b) { return a - b; });
+            var plan = [];
+            for (i = 0; i < out.length; i++) {
+                var hit = pickSentence(state, { ts: out[i], excludeIds: recentIds(state, RECENT_N).concat(used) });
+                if (!hit) { break; }
+                used.push(hit.id);
+                plan.push({ at: out[i], sid: hit.id, text: hit.text, cat: hit.cat, fired: false });
+            }
+            return plan;
+        }
+        /* 批量文本解析：空行分隔 = 一条；条内换行合并成一行 */
+        function parseBulk(text) {
+            var blocks = String(text == null ? '' : text).replace(/\r\n/g, '\n').split(/\n[ \t]*\n+/);
+            var out = [];
+            for (var i = 0; i < blocks.length; i++) {
+                var t = blocks[i].replace(/\s*\n\s*/g, ' ').replace(/[ \t]{2,}/g, ' ').trim();
+                if (t) { out.push(t); }
+            }
+            return out;
+        }
+        /* 按整行解析（备用方案：一段里没有空行时用） */
+        function parseLines(text) {
+            var lines = String(text == null ? '' : text).replace(/\r\n/g, '\n').split('\n');
+            var out = [];
+            for (var i = 0; i < lines.length; i++) {
+                var t = lines[i].trim();
+                if (t) { out.push(t); }
+            }
+            return out;
+        }
+        /* 自检：浏览器 ?selftest=1 与 Node 脚本 scripts/selftest.js 共用 */
+        function runSelfTest(makeState) {
+            var R = [];
+            function ok(name, cond, info) { R.push({ name: name, ok: !!cond, info: info == null ? '' : String(info) }); }
+            var base = function () { return makeState(); };
+            var s, i;
+
+            /* 1. 内置语料 */
+            var bi = expandBuiltin();
+            ok('内置语料 4 类 × 9 条 = 36', bi.length === 36, bi.length);
+            ok('内置语料分类合法', bi.every(function (x) {
+                return CATS.some(function (c) { return c.key === x.cat; });
+            }), '');
+            var tooLong = bi.filter(function (x) { return x.text.length > 25; });
+            ok('内置语料均为短句 (<=25 字)', tooLong.length === 0, tooLong.map(function (x) { return x.text; }).join(' / '));
+
+            /* 2. 数值工具 */
+            ok('hhmmToMin 08:30 = 510', hhmmToMin('08:30') === 510, hhmmToMin('08:30'));
+            ok('minToHHMM 1350 = 22:30', minToHHMM(1350) === '22:30', minToHHMM(1350));
+            ok('dateKey 格式正确', /^\d{4}-\d{2}-\d{2}$/.test(dateKey(Date.now())), dateKey(Date.now()));
+
+            /* 3. 安静时段（含跨零点） */
+            var q = { s: '23:30', e: '07:30' };
+            ok('23:45 在安静时段内', inQuiet(q, hhmmToMin('23:45')) === true);
+            ok('06:00 在安静时段内（跨零点）', inQuiet(q, hhmmToMin('06:00')) === true);
+            ok('12:00 不在安静时段内', inQuiet(q, hhmmToMin('12:00')) === false);
+            ok('起止相同视为关闭', inQuiet({ s: '08:00', e: '08:00' }, 480) === false);
+
+            /* 4. 批量解析：空行 = 一条 */
+            var txt = '第一句\n\n第二句\n还是第二句\n\n\n第三句\n\n';
+            var ps = parseBulk(txt);
+            ok('空行分隔解析出 3 条', ps.length === 3, JSON.stringify(ps));
+            ok('条内换行被合并成一行', ps[1] === '第二句 还是第二句', ps[1]);
+            ok('首尾空白被忽略', ps[0] === '第一句' && ps[2] === '第三句', JSON.stringify(ps));
+            ok('空文本返回空数组', parseBulk('   \n\n  \n').length === 0);
+            ok('按行解析备用方案可用', parseLines('甲\n\n乙\n丙').length === 3, JSON.stringify(parseLines('甲\n\n乙\n丙')));
+
+            /* 5. 心情决定分类倾向 */
+            var now = Date.now();
+            var lowState = base();
+            var highState = base();
+            for (i = 0; i < 4; i++) {
+                lowState.records[dateKey(now - i * 86400000)] = { mood: i < 2 ? 1 : 2, tags: [], note: '' };
+                highState.records[dateKey(now - i * 86400000)] = { mood: i < 2 ? 5 : 4, tags: [], note: '' };
+            }
+            function count(state) {
+                var n = { comfort: 0, encourage: 0, praise: 0, company: 0 };
+                for (var k = 0; k < 2000; k++) { n[pickCat(state, now)]++; }
+                return n;
+            }
+            var nl = count(lowState), nh = count(highState);
+            ok('低落时 安慰 明显多于 夸赞', nl.comfort / Math.max(1, nl.praise) > 1.5, 'comfort=' + nl.comfort + ' praise=' + nl.praise);
+            ok('开心时 夸赞 明显多于 安慰', nh.praise / Math.max(1, nh.comfort) > 1.5, 'praise=' + nh.praise + ' comfort=' + nh.comfort);
+            ok('连续低落时安慰权重最高', nl.comfort > nl.encourage && nl.comfort > nl.company, JSON.stringify(nl));
+            var nm0 = count(base());
+            ok('没打卡时 4 类都会出现', nm0.comfort > 0 && nm0.encourage > 0 && nm0.praise > 0 && nm0.company > 0, JSON.stringify(nm0));
+            /* 6. 派发稳定、冷却生效 */
+            s = base();
+            var nul = 0, same = 0, prev = '';
+            for (i = 0; i < 100; i++) {
+                var one = pickSentence(s, {});
+                if (!one) { nul++; continue; }
+                if (one.id === prev) { same++; }
+                prev = one.id;
+                s.log.push({ sid: one.id, cat: one.cat, text: one.text, at: now + i * 1000 });
+                s.cooldown[one.id] = now + i * 1000;
+            }
+            ok('派发 100 次不会返回 null', nul === 0, 'null=' + nul);
+            ok('刚用过的句子不会连着再来', same === 0, '连来 ' + same + ' 次');
+
+            /* 6b. 冷却判定精确验证：同一分类里一句在冷却中，另一句早已过冷却 */
+            var two = base();
+            var a1 = two.sentences[0], b1 = two.sentences[1];
+            two.sentences = [a1, b1];
+            two.cooldown[a1.id] = now - 1000;
+            two.cooldown[b1.id] = now - COOL_MS - 1000;
+            var pickB = 0;
+            for (i = 0; i < 100; i++) {
+                if (pickSentence(two, { cat: a1.cat }).id === b1.id) { pickB++; }
+            }
+            ok('7 天冷却期内不复用（100 次都给了另一句）', pickB === 100, '给了旧句 ' + pickB + ' 次');
+            /* 两句都在冷却中时，仍要给出可用的一句（放宽而不是返回 null） */
+            two.cooldown[b1.id] = now - 1000;
+            ok('全在冷却中时放宽限制而不是返回 null', !!pickSentence(two, { cat: a1.cat }));
+
+            /* 7. 某分类没句子时兜底到其他分类 */
+            var onlyComfort = base();
+            onlyComfort.sentences = onlyComfort.sentences.filter(function (x) { return x.cat === 'comfort'; });
+            var fb = pickSentence(onlyComfort, { cat: 'praise' });
+            ok('指定分类没句子时兜底可用', !!fb && fb.cat === 'comfort', fb ? fb.text : 'null');
+
+            /* 8. 语料为空时返回 null，不崩 */
+            var empty = base();
+            empty.sentences = [];
+            ok('语料为空时返回 null', pickSentence(empty, {}) === null);
+
+            /* 9. 计划生成 */
+            s = base();
+            s.settings.windows = [{ s: '08:00', e: '12:00' }, { s: '14:00', e: '18:00' }, { s: '21:00', e: '23:00' }];
+            s.settings.dailyMax = 4;
+            var t0 = new Date();
+            t0.setHours(7, 0, 0, 0);
+            var plan = buildPlan(s, t0.getTime(), 3);
+            var perDay = {}, times = [];
+            plan.forEach(function (p) {
+                var k = dateKey(p.at);
+                perDay[k] = (perDay[k] || 0) + 1;
+                var d = new Date(p.at);
+                times.push(minToHHMM(d.getHours() * 60 + d.getMinutes()));
+            });
+            var dayCounts = Object.keys(perDay).map(function (k) { return perDay[k]; });
+            ok('3 天计划生成成功', plan.length > 0, plan.length + ' 条 / ' + Object.keys(perDay).length + ' 天');
+            ok('计划按时间升序', plan.every(function (p, k) { return k === 0 || p.at >= plan[k - 1].at; }));
+            ok('每天不超过 dailyMax', dayCounts.every(function (n) { return n <= s.settings.dailyMax; }), JSON.stringify(perDay));
+            ok('计划内容已预先生成（App 靠它离线弹通知）', plan.every(function (p) { return !!p.text && !!p.sid && !!p.cat; }));
+            ok('计划时间都在未来', plan.every(function (p) { return p.at > t0.getTime(); }));
+            ok('计划避开安静时段', plan.every(function (p) {
+                var d = new Date(p.at);
+                return !inQuiet(s.settings.quiet, d.getHours() * 60 + d.getMinutes());
+            }));
+            ok('发送时刻是随机的（不是固定钟点）', new Set(times).size > 1, times.join(','));
+            ok('同一次排程内不重复用同一句', (function () {
+                var ids = plan.map(function (p) { return p.sid; });
+                return new Set(ids).size === ids.length;
+            })(), plan.length + ' 条');
+
+            /* 10. 没有可用时间段时返回空计划（不崩） */
+            var noWin = base();
+            noWin.settings.windows = [];
+            ok('没有时间段时计划为空', buildPlan(noWin, Date.now(), 3).length === 0);
+
+            var pass = R.filter(function (x) { return x.ok; }).length;
+            return { list: R, pass: pass, total: R.length, allPass: pass === R.length };
+        }
+        /* ==== PURE_ENGINE_END ==== */
+    </script>
+
+    <script>
+        /* ================= 应用层：存储 / 通知 / 排程 ================= */
+        var LS_KEY = 'xwlb.v1';
+        var CAP = window.Capacitor || null;
+        var NATIVE = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
+        var LocalNotif = (CAP && CAP.Plugins && CAP.Plugins.LocalNotifications) || null;
+        var state = null;
+        var card = { text: '', cat: '', sid: '', locked: false };
+
+        function $(id) { return document.getElementById(id); }
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            });
+        }
+        function defaultState() {
+            return {
+                version: 1,
+                settings: {
+                    appName: '想我了吧',
+                    dailyMax: 4,
+                    windows: [{ s: '08:00', e: '12:00' }, { s: '14:00', e: '18:00' }, { s: '21:00', e: '23:00' }],
+                    quiet: { s: '23:30', e: '07:30' },
+                    notify: true,
+                    vibrate: true,
+                    sound: true,
+                    paused: false
+                },
+                sentences: expandBuiltin(),
+                records: {},
+                cooldown: {},
+                log: [],
+                plan: [],
+                planBuiltAt: 0
+            };
+        }
+        function loadState() {
+            var s = null;
+            try {
+                var raw = localStorage.getItem(LS_KEY);
+                if (raw) { s = JSON.parse(raw); }
+            } catch (e) { s = null; }
+            if (!s || typeof s !== 'object') { s = defaultState(); }
+            var d = defaultState();
+            s.version = 1;
+            s.settings = s.settings || {};
+            for (var k in d.settings) {
+                if (!(k in s.settings)) { s.settings[k] = d.settings[k]; }
+            }
+            if (!s.settings.windows || !s.settings.windows.length) { s.settings.windows = d.settings.windows; }
+            if (!Array.isArray(s.sentences)) { s.sentences = d.sentences; }
+            s.records = s.records || {};
+            s.cooldown = s.cooldown || {};
+            s.log = Array.isArray(s.log) ? s.log : [];
+            s.plan = Array.isArray(s.plan) ? s.plan : [];
+            return s;
+        }
+        function save() {
+            try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) { toast('保存失败：存储空间可能满了'); }
+        }
+        function toast(msg, ms) {
+            var t = $('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toast._tm);
+            toast._tm = setTimeout(function () { t.classList.remove('show'); }, ms || 2000);
+        }
+        function openSheet(html) {
+            $('sheetBody').innerHTML = html;
+            $('sheetMask').classList.add('show');
+        }
+        function closeSheet() { $('sheetMask').classList.remove('show'); }
+
+        /* ---------- 提示音（不用外部文件） ---------- */
+        function beep() {
+            try {
+                var AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) { return; }
+                var ctx = beep._ctx || (beep._ctx = new AC());
+                if (ctx.state === 'suspended') { ctx.resume(); }
+                var o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = 'sine';
+                o.frequency.value = 880;
+                g.gain.setValueAtTime(0.0001, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.03);
+                g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(); o.stop(ctx.currentTime + 0.45);
+            } catch (e) { }
+        }
+        /* ---------- 通知：网页用 Web Notification，App 用系统本地通知 ---------- */
+        function canWebNotify() { return !NATIVE && ('Notification' in window) && Notification.permission === 'granted'; }
+        /* Android 12+ 要用「精确闹钟」才能真正按时响；被拒绝时引导去系统设置 */
+        function ensureExactAlarm(done) {
+            if (!NATIVE || !LocalNotif || !LocalNotif.checkExactNotificationSetting) { if (done) { done(); } return; }
+            LocalNotif.checkExactNotificationSetting().then(function (r) {
+                if (r && (r.exact_alarm === 'denied' || r.exact_alarm === 'not_set')) {
+                    toast('要让提醒准点响，需要允许「闹钟和提醒」权限');
+                    LocalNotif.changeExactNotificationSetting().catch(function () { }).then(function () { if (done) { done(); } });
+                } else { if (done) { done(); } }
+            }).catch(function () { if (done) { done(); } });
+        }
+        function requestNotifyPermission(cb) {
+            if (NATIVE) {
+                if (!LocalNotif) { toast('当前环境不支持系统通知'); if (cb) { cb(false); } return; }
+                LocalNotif.requestPermissions().then(function (r) {
+                    var okp = !!(r && r.display === 'granted');
+                    if (!okp) { if (cb) { cb(false); } return; }
+                    ensureExactAlarm(function () { if (cb) { cb(true); } });
+                }).catch(function () { if (cb) { cb(false); } });
+                return;
+            }
+            if (!('Notification' in window)) { toast('这个浏览器不支持系统通知，页面开着时仍会提醒'); if (cb) { cb(false); } return; }
+            if (Notification.permission === 'granted') { if (cb) { cb(true); } return; }
+            if (Notification.permission === 'denied') { toast('通知被拒绝了，请在浏览器设置里放开'); if (cb) { cb(false); } return; }
+            Notification.requestPermission().then(function (p) { if (cb) { cb(p === 'granted'); } });
+        }
+        function notifyNow(title, body) {
+            if (canWebNotify()) {
+                try { new Notification(title, { body: body, tag: 'xwlb' }); } catch (e) { }
+            }
+        }
+        /* App 内可见的提醒：震动 + 提示音 + 页内气泡 */
+        function localAlert(body) {
+            var st = state.settings;
+            if (st.vibrate && navigator.vibrate) { try { navigator.vibrate([28, 60, 28]); } catch (e) { } }
+            if (st.sound) { beep(); }
+            toast(body, 3600);
+        }
+
+        /* ---------- 排程：预生成内容，交给系统闹钟 ---------- */
+        function nextPlan() {
+            for (var i = 0; i < state.plan.length; i++) {
+                if (!state.plan[i].fired) { return state.plan[i]; }
+            }
+            return null;
+        }
+        function rebuildPlan(silent) {
+            var now = Date.now();
+            state.planBuiltAt = now;
+            if (state.settings.paused) {
+                state.plan = [];
+                save();
+                pushNative();
+                if (!silent) { toast('已暂停，不会再主动找你'); }
+                return;
+            }
+            state.plan = buildPlan(state, now, NATIVE ? 4 : 2);
+            save();
+            pushNative();
+            if (!silent) { toast('已重新排好：' + state.plan.length + ' 条待发'); }
+        }
+        function fireItem(p) {
+            p.fired = true;
+            state.log.push({ sid: p.sid, cat: p.cat, text: p.text, at: p.at, mood: moodOf(state, p.at) });
+            if (state.log.length > 200) { state.log = state.log.slice(-200); }
+            state.cooldown[p.sid] = Date.now();
+            save();
+            card = { text: p.text, cat: p.cat, sid: p.sid, locked: true };
+            renderCard();
+            renderRecent();
+            renderStats();
+            /* App 里由系统通知负责弹出，页面内只做提示，避免双重打扰 */
+            if (!NATIVE) { localAlert(p.text); notifyNow(state.settings.appName, p.text); }
+        }
+        function tick() {
+            var now = Date.now();
+            var hit = false;
+            for (var i = 0; i < state.plan.length; i++) {
+                var p = state.plan[i];
+                if (!p.fired && p.at <= now) { fireItem(p); hit = true; }
+            }
+            if (!state.settings.paused && state.planBuiltAt && now - state.planBuiltAt > 11 * 3600 * 1000) {
+                rebuildPlan(true);
+            }
+            renderHints();
+            if (hit) { renderStats(); }
+        }
+        /* 把未来计划写进系统闹钟（关掉 App、没网也能到点弹） */
+        function pushNative() {
+            if (!NATIVE || !LocalNotif) { return; }
+            var list = state.plan.filter(function (p) { return !p.fired; }).slice(0, 48);
+            var notifs = list.map(function (p, i) {
+                return {
+                    id: i + 1,
+                    title: state.settings.appName,
+                    body: p.text,
+                    schedule: { at: new Date(p.at), allowWhileIdle: true },
+                    channelId: 'default',
+                    autoCancel: true
+                };
+            });
+            var note = $('schedNote');
+            LocalNotif.getPending().then(function (res) {
+                var old = (res && res.notifications) ? res.notifications : [];
+                return old.length ? LocalNotif.cancel({ notifications: old }) : null;
+            }).then(function () {
+                if (!notifs.length) { return null; }
+                return LocalNotif.schedule({ notifications: notifs });
+            }).then(function () {
+                if (note) { note.textContent = '已把未来 ' + notifs.length + ' 条排进系统闹钟：关掉 App 也会准时提醒。'; }
+            }).catch(function (e) {
+                if (note) { note.textContent = '排程失败：' + (e && e.message ? e.message : e); }
+            });
+        }
+        /* ================= 渲染 ================= */
+        function findSentence(id) {
+            for (var i = 0; i < state.sentences.length; i++) { if (state.sentences[i].id === id) { return state.sentences[i]; } }
+            return null;
+        }
+        function renderCard() {
+            $('cardText').textContent = card.text || '还没有句子，去「句子」页加几句吧';
+            $('cardCat').textContent = catEmoji(card.cat) + ' ' + catName(card.cat);
+            var cur = card.sid ? findSentence(card.sid) : null;
+            $('btnFav').textContent = (cur && cur.fav) ? '★ 已收藏' : '☆ 收藏';
+        }
+        /* 手动要一句 */
+        function rollSentence(forceCat) {
+            var pick = pickSentence(state, { cat: forceCat || '' });
+            if (!pick) {
+                toast('还没有句子，先去「句子」页加几句');
+                return;
+            }
+            card = { text: pick.text, cat: pick.cat, sid: pick.id, locked: false };
+            state.cooldown[pick.id] = Date.now();
+            state.log.push({ sid: pick.id, cat: pick.cat, text: pick.text, at: Date.now(), manual: true, mood: moodOf(state, Date.now()) });
+            if (state.log.length > 200) { state.log = state.log.slice(-200); }
+            save();
+            renderCard();
+            renderRecent();
+            renderStats();
+            if (state.settings.sound) { beep(); }
+        }
+        function renderRecent() {
+            var box = $('recentList');
+            var list = state.log.slice(-8).reverse();
+            if (!list.length) { box.innerHTML = '<span class="muted">还没有记录</span>'; return; }
+            box.innerHTML = list.map(function (x) {
+                var d = new Date(x.at);
+                var tm = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+                var day = (dateKey(x.at) === dateKey(Date.now())) ? '今天' : dateKey(x.at).slice(5);
+                return '<div class="hist-item"><div class="t grow">' + esc(x.text) +
+                    '<div class="tiny">' + catEmoji(x.cat) + ' ' + catName(x.cat) + ' · ' + day + ' ' + tm +
+                    (x.manual ? ' · 你要的' : '') + '</div></div></div>';
+            }).join('');
+        }
+        function renderHints() {
+            var p = nextPlan();
+            var hint = '—';
+            if (state.settings.paused) {
+                hint = '已暂停';
+            } else if (p) {
+                var d = new Date(p.at);
+                var today = dateKey(p.at) === dateKey(Date.now());
+                var mins = Math.round((p.at - Date.now()) / 60000);
+                var when = (today ? '今天 ' : dateKey(p.at).slice(5) + ' ') + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+                hint = when + (mins > 0 && mins < 600 ? '（约 ' + mins + ' 分钟后）' : '');
+            }
+            $('nextHint').textContent = hint;
+            var note = $('schedNote');
+            if (note && !note.dataset.native) {
+                if (NATIVE) {
+                    /* App 里这条提示由 pushNative 写，别被 tick 覆盖 */
+                    note.dataset.native = '1';
+                } else {
+                    note.textContent = state.settings.paused
+                        ? '已暂停主动提醒，需要时点下面的按钮恢复。'
+                        : '网页版：页面开着才会准时提醒；装成 App 后关掉也能提醒。';
+                }
+            }
+            $('statNext').textContent = hint;
+        }
+        function renderStats() {
+            $('statSent').textContent = state.sentences.length + ' 条';
+            $('statDays').textContent = Object.keys(state.records).length + ' 天';
+            $('statLog').textContent = state.log.length + ' 句';
+        }
+        function renderTopbar() {
+            var name = state.settings.appName || '想我了吧';
+            document.title = name;
+            $('appBrand').textContent = name;
+            var st = checkinStreak();
+            $('chipStreak').textContent = st > 0 ? ('连续打卡 ' + st + ' 天') : '还没开始打卡';
+            var m = moodOf(state, Date.now());
+            $('chipMood').textContent = m ? (MOOD_FACES[m - 1].e + ' ' + MOOD_FACES[m - 1].l) : '今天还没打卡';
+        }
+        /* 连续打卡天数（含今天） */
+        function checkinStreak() {
+            var n = 0, d = new Date();
+            d.setHours(0, 0, 0, 0);
+            if (!state.records[dateKey(d.getTime())]) { d.setDate(d.getDate() - 1); }
+            for (var i = 0; i < 400; i++) {
+                if (!state.records[dateKey(d.getTime())]) { break; }
+                n++;
+                d.setDate(d.getDate() - 1);
+            }
+            return n;
+        }
+        function switchTab(name) {
+            var views = ['today', 'checkin', 'sentences', 'settings'];
+            for (var i = 0; i < views.length; i++) {
+                $('view-' + views[i]).classList.toggle('active', views[i] === name);
+            }
+            var btns = $('tabbar').getElementsByTagName('button');
+            for (var j = 0; j < btns.length; j++) {
+                btns[j].classList.toggle('on', btns[j].getAttribute('data-tab') === name);
+            }
+            if (name === 'checkin') { renderCheckin(); }
+            if (name === 'sentences') { renderSentences(); }
+            if (name === 'settings') { renderSettings(); }
+            if (name === 'today') { renderHints(); renderRecent(); }
+            window.scrollTo(0, 0);
+        }
+        /* ---------- 打卡 ---------- */
+        var draft = { mood: 0, tags: [], note: '' };
+        function renderCheckin() {
+            var today = dateKey(Date.now());
+            var rec = state.records[today] || { mood: 0, tags: [], note: '' };
+            draft = { mood: rec.mood || 0, tags: (rec.tags || []).slice(), note: rec.note || '' };
+            $('todayLabel').textContent = today + (rec.mood ? ' · 已打卡，可以改' : '');
+            $('moodSaved').textContent = rec.mood ? (MOOD_FACES[rec.mood - 1].e + ' 已打卡') : '未打卡';
+            $('moodPicker').innerHTML = MOOD_FACES.map(function (f) {
+                return '<button data-mood="' + f.v + '" class="' + (draft.mood === f.v ? 'on' : '') + '">' +
+                    '<span class="e">' + f.e + '</span><span class="l">' + f.l + '</span></button>';
+            }).join('');
+            $('tagBox').innerHTML = MOOD_TAGS.map(function (t) {
+                return '<button data-tag="' + esc(t) + '" class="' + (draft.tags.indexOf(t) >= 0 ? 'on' : '') + '">' + esc(t) + '</button>';
+            }).join('');
+            $('moodNote').value = draft.note;
+            renderTrend();
+            renderTopbar();
+        }
+        function renderTrend() {
+            var box = $('trendBars'), html = '', sum = 0, cnt = 0;
+            for (var i = 6; i >= 0; i--) {
+                var d = new Date();
+                d.setHours(0, 0, 0, 0);
+                d.setDate(d.getDate() - i);
+                var rec = state.records[dateKey(d.getTime())];
+                var v = rec && rec.mood ? rec.mood : 0;
+                if (v) { sum += v; cnt++; }
+                var h = v ? Math.round(v / 5 * 100) : 4;
+                html += '<div class="b' + (v ? '' : ' none') + '"><i style="height:' + h + '%"></i>' +
+                    '<span>' + (d.getMonth() + 1) + '/' + d.getDate() + '</span></div>';
+            }
+            box.innerHTML = html;
+            $('trendStat').textContent = cnt ? ('近 7 天打卡 ' + cnt + ' 天 · 平均 ' + (sum / cnt).toFixed(1) + ' 分') : '近 7 天还没打卡';
+        }
+        function saveMood() {
+            if (!draft.mood) { toast('先点一个心情吧'); return; }
+            draft.note = $('moodNote').value.slice(0, 200);
+            var today = dateKey(Date.now());
+            var first = !state.records[today] || !state.records[today].mood;
+            state.records[today] = { mood: draft.mood, tags: draft.tags.slice(), note: draft.note, at: Date.now() };
+            save();
+            renderCheckin();
+            if (first) {
+                /* 打完卡立刻给一句贴合心情的话，再重排后续计划 */
+                rebuildPlan(true);
+                rollSentence('');
+                toast('记下了，' + (draft.mood <= 2 ? '我陪你待会儿' : (draft.mood >= 4 ? '真为你高兴' : '收到')), 2600);
+            } else {
+                rebuildPlan(true);
+                toast('已更新今天的心情');
+            }
+            renderTopbar();
+        }
+        /* 全部打卡记录 */
+        function showMoodHistory() {
+            var keys = Object.keys(state.records).sort().reverse();
+            if (!keys.length) { toast('还没有打卡记录'); return; }
+            var html = '<h3>全部打卡记录</h3><div class="dev-note">共 ' + keys.length + ' 天</div><div style="margin-top:10px">';
+            keys.slice(0, 120).forEach(function (k) {
+                var r = state.records[k];
+                var f = MOOD_FACES[(r.mood || 3) - 1];
+                html += '<div class="kv"><span>' + k + '</span><span>' + f.e + ' ' + f.l +
+                    (r.tags && r.tags.length ? ' · ' + esc(r.tags.join('/')) : '') + '</span></div>';
+                if (r.note) { html += '<div class="tiny" style="margin:-4px 0 8px">' + esc(r.note) + '</div>'; }
+            });
+            html += '</div><button class="block small" style="margin-top:12px" onclick="closeSheet()">关闭</button>';
+            openSheet(html);
+        }
+        /* ---------- 句子管理 ---------- */
+        var sentFilter = 'all';
+        function renderSentences() {
+            var fb = $('sentFilter');
+            var opts = [{ key: 'all', name: '全部' }, { key: 'fav', name: '★ 收藏' }].concat(CATS.map(function (c) {
+                return { key: c.key, name: c.emoji + ' ' + c.name };
+            }));
+            fb.innerHTML = opts.map(function (o) {
+                return '<button data-cat="' + o.key + '" class="' + (sentFilter === o.key ? 'on' : '') + '">' + o.name + '</button>';
+            }).join('');
+            var list = state.sentences.filter(function (s) {
+                if (sentFilter === 'all') { return true; }
+                if (sentFilter === 'fav') { return !!s.fav; }
+                return s.cat === sentFilter;
+            });
+            $('sentCount').textContent = '共 ' + state.sentences.length + ' 条 · 当前显示 ' + list.length + ' 条';
+            if (!list.length) {
+                $('sentList').innerHTML = '<span class="muted">这里还没有句子，点上面的「批量导入」一次性加一堆吧</span>';
+                return;
+            }
+            $('sentList').innerHTML = list.slice(0, 400).map(function (s) {
+                return '<div class="sent">' +
+                    '<div class="txt' + (s.text.length > LONG_LEN ? ' long' : '') + '">' + esc(s.text) +
+                    '<div class="meta">' + catEmoji(s.cat) + ' ' + catName(s.cat) + ' · ' + (s.builtin ? '内置' : '我加的') +
+                    (s.text.length > LONG_LEN ? ' · ' + s.text.length + ' 字（有点长）' : '') + '</div></div>' +
+                    '<button class="ghost small" data-fav="' + esc(s.id) + '">' + (s.fav ? '★' : '☆') + '</button>' +
+                    '<button class="ghost small" data-edit="' + esc(s.id) + '">改</button>' +
+                    '<button class="ghost small danger" data-del="' + esc(s.id) + '">删</button>' +
+                    '</div>';
+            }).join('');
+            if (list.length > 400) { $('sentHint').textContent = '只显示前 400 条'; }
+            else { $('sentHint').textContent = '点「★」收藏，「改」编辑'; }
+        }
+        function newSentenceId() { return 'u.' + Date.now().toString(36) + '.' + randInt(9999); }
+        function editSentence(id) {
+            var s = id ? findSentence(id) : null;
+            var text = s ? s.text : '';
+            var cat = s ? s.cat : (sentFilter !== 'all' && sentFilter !== 'fav' ? sentFilter : CATS[0].key);
+            var html = '<h3>' + (s ? '改这一句' : '加一句') + '</h3>' +
+                '<textarea id="oneText" style="margin-top:10px" placeholder="比如：今天也辛苦你了。">' + esc(text) + '</textarea>' +
+                '<div class="catfilter" id="oneCat" style="margin-top:10px">' + CATS.map(function (c) {
+                    return '<button data-cat="' + c.key + '" class="' + (cat === c.key ? 'on' : '') + '">' + c.emoji + ' ' + c.name + '</button>';
+                }).join('') + '</div>' +
+                '<div class="tiny" id="oneLen">' + (text.length) + ' 字</div>' +
+                '<button class="primary block" id="oneSave" style="margin-top:12px">保存</button>' +
+                '<button class="block ghost small" style="margin-top:8px" onclick="closeSheet()">取消</button>';
+            openSheet(html);
+            var pick = cat;
+            var ta = $('oneText');
+            ta.oninput = function () { $('oneLen').textContent = ta.value.trim().length + ' 字'; };
+            $('oneCat').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                pick = b.getAttribute('data-cat');
+                var all = $('oneCat').getElementsByTagName('button');
+                for (var i = 0; i < all.length; i++) { all[i].classList.toggle('on', all[i] === b); }
+            };
+            $('oneSave').onclick = function () {
+                var t = ta.value.trim();
+                if (!t) { toast('还没写内容'); return; }
+                if (s) { s.text = t; s.cat = pick; }
+                else { state.sentences.push({ id: newSentenceId(), cat: pick, text: t, builtin: false, fav: false, at: Date.now() }); }
+                save();
+                rebuildPlan(true);
+                closeSheet();
+                renderSentences();
+                toast('已保存');
+            };
+        }
+        /* ---------- 批量导入 ---------- */
+        function showBulk() {
+            var pick = (sentFilter !== 'all' && sentFilter !== 'fav') ? sentFilter : CATS[0].key;
+            openSheet('<h3>批量导入</h3>' +
+                '<div class="dev-note">空一行 = 一条新的；同一段里换行会合成一条。自动去首尾空白、自动跳过重复。</div>' +
+                '<textarea id="bulkText" style="margin-top:10px" placeholder="今天也辛苦你了。&#10;&#10;想我了吧？&#10;我一直在。&#10;&#10;你比你以为的强多了。"></textarea>' +
+                '<div class="row between" style="margin-top:8px"><span class="muted" id="bulkCount">0 条</span><span class="tiny" id="bulkWarn"></span></div>' +
+                '<div class="catfilter" id="bulkCat" style="margin-top:10px">' + CATS.map(function (c) {
+                    return '<button data-cat="' + c.key + '" class="' + (pick === c.key ? 'on' : '') + '">' + c.emoji + ' ' + c.name + '</button>';
+                }).join('') + '</div>' +
+                '<button class="primary block" id="bulkSave" style="margin-top:12px" disabled>加进语料库</button>' +
+                '<button class="block ghost small" style="margin-top:8px" onclick="closeSheet()">取消</button>');
+            var ta = $('bulkText');
+            var preview = function () {
+                var items = parseBulk(ta.value);
+                var exist = {}, uniq = [], dup = 0, longN = 0;
+                state.sentences.forEach(function (s) { exist[s.text] = 1; });
+                items.forEach(function (t) {
+                    if (exist[t] || uniq.indexOf(t) >= 0) { dup++; return; }
+                    uniq.push(t);
+                    if (t.length > LONG_LEN) { longN++; }
+                });
+                $('bulkCount').textContent = uniq.length + ' 条可以加' + (dup ? '，跳过 ' + dup + ' 条重复' : '');
+                $('bulkWarn').textContent = longN ? (longN + ' 条超过 ' + LONG_LEN + ' 字，会显示得比较满') : '';
+                $('bulkSave').disabled = uniq.length === 0;
+                return uniq;
+            };
+            ta.oninput = preview;
+            $('bulkCat').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                pick = b.getAttribute('data-cat');
+                var all = $('bulkCat').getElementsByTagName('button');
+                for (var i = 0; i < all.length; i++) { all[i].classList.toggle('on', all[i] === b); }
+            };
+            $('bulkSave').onclick = function () {
+                var uniq = preview();
+                if (!uniq.length) { return; }
+                uniq.forEach(function (t) {
+                    state.sentences.push({ id: newSentenceId(), cat: pick, text: t, builtin: false, fav: false, at: Date.now() });
+                });
+                save();
+                rebuildPlan(true);
+                closeSheet();
+                renderSentences();
+                renderStats();
+                toast('加了 ' + uniq.length + ' 条');
+            };
+            preview();
+        }
+        /* 把当前这句存成我的句子 */
+        function saveCardAsMine() {
+            if (!card.text) { return; }
+            if (state.sentences.some(function (s) { return s.text === card.text; })) { toast('这句已经在语料库里了'); return; }
+            state.sentences.push({ id: newSentenceId(), cat: card.cat || CATS[0].key, text: card.text, builtin: false, fav: false, at: Date.now() });
+            save();
+            rebuildPlan(true);
+            toast('已存进「我的句子」');
+        }
+        function clearBuiltin() {
+            var n = state.sentences.filter(function (s) { return s.builtin; }).length;
+            if (!n) { toast('内置句子已经清空了'); return; }
+            openSheet('<h3>清空内置句子</h3>' +
+                '<div class="dev-note" style="margin-top:8px">会删掉 ' + n + ' 条内置句子；你自己加的句子、打卡记录、收藏都不受影响。</div>' +
+                '<button class="primary block danger" id="cbYes" style="margin-top:14px">确认清空 ' + n + ' 条</button>' +
+                '<button class="block ghost small" style="margin-top:8px" onclick="closeSheet()">算了</button>');
+            $('cbYes').onclick = function () {
+                state.sentences = state.sentences.filter(function (s) { return !s.builtin; });
+                save();
+                rebuildPlan(true);
+                closeSheet();
+                renderSentences();
+                renderStats();
+                toast('内置句子已清空，剩下 ' + state.sentences.length + ' 条');
+            };
+        }
+        /* ---------- 备份 ---------- */
+        function exportBackup() {
+            var data = JSON.stringify({ app: '想我了吧', version: 1, exportedAt: new Date().toISOString(), state: state }, null, 2);
+            var blob = new Blob([data], { type: 'application/json' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = '想我了吧-' + dateKey(Date.now()) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+            toast('已导出备份文件');
+        }
+        function importBackup(file) {
+            var fr = new FileReader();
+            fr.onload = function () {
+                try {
+                    var obj = JSON.parse(String(fr.result));
+                    var s = obj && obj.state ? obj.state : obj;
+                    if (!s || !s.sentences) { throw new Error('文件里没有句子数据'); }
+                    var d = defaultState();
+                    s.settings = s.settings || d.settings;
+                    for (var k in d.settings) { if (!(k in s.settings)) { s.settings[k] = d.settings[k]; } }
+                    s.records = s.records || {};
+                    s.cooldown = s.cooldown || {};
+                    s.log = Array.isArray(s.log) ? s.log : [];
+                    s.plan = [];
+                    s.planBuiltAt = 0;
+                    state = s;
+                    save();
+                    rebuildPlan(true);
+                    boot(true);
+                    toast('导入成功：' + state.sentences.length + ' 条句子');
+                } catch (e) {
+                    toast('导入失败：' + (e && e.message ? e.message : e), 3000);
+                }
+            };
+            fr.readAsText(file);
+        }
+        /* ---------- 设置 ---------- */
+        function renderWindows() {
+            var st = state.settings;
+            var box = $('windowList');
+            if (!st.windows.length) {
+                box.innerHTML = '<span class="muted">还没有时间段，先加一个吧</span>';
+                return;
+            }
+            box.innerHTML = st.windows.map(function (w, i) {
+                return '<div class="row" style="margin-bottom:10px" data-wrow="' + i + '">' +
+                    '<input type="time" data-ws="' + i + '" value="' + esc(w.s) + '">' +
+                    '<span class="muted">到</span>' +
+                    '<input type="time" data-we="' + i + '" value="' + esc(w.e) + '">' +
+                    (st.windows.length > 1 ? '<button class="ghost small danger" data-wdel="' + i + '">删</button>' : '') +
+                    '</div>';
+            }).join('');
+        }
+        function renderSettings() {
+            var st = state.settings;
+            $('setAppName').value = st.appName || '';
+            $('setDailyMax').value = st.dailyMax;
+            $('setQuietS').value = st.quiet.s;
+            $('setQuietE').value = st.quiet.e;
+            $('setNotify').checked = !!st.notify;
+            $('setVibrate').checked = !!st.vibrate;
+            $('setSound').checked = !!st.sound;
+            renderWindows();
+            renderStats();
+            renderHints();
+            var msg;
+            if (NATIVE) {
+                msg = 'App 模式：内容会提前排进系统闹钟，关掉 App 也能收到。建议在系统设置里允许「自启动」并关掉省电限制。';
+            } else if (!('Notification' in window)) {
+                msg = '这个浏览器不支持系统通知：只在你打开页面时提醒。装成 App 后就能后台提醒。';
+            } else if (Notification.permission === 'granted') {
+                msg = '网页通知已允许：页面开着时能弹系统通知；关掉浏览器就不会提醒了（浏览器限制，无法绕开）。';
+            } else if (Notification.permission === 'denied') {
+                msg = '网页通知被拒绝：请在浏览器设置里允许本站通知。';
+            } else {
+                msg = '还没允许通知：点上面的按钮授权。';
+            }
+            $('notifyState').textContent = msg;
+        }
+        function showGuide() {
+            openSheet('<h3>装成 App 后怎么才能准时收到</h3>' +
+                '<div class="guide" style="margin-top:10px">' +
+                '<p>1. 打开 App 一次，让它把未来几天的句子排进系统闹钟（设置页会显示排了多少条）。</p>' +
+                '<p>2. 手机设置 → 应用管理 → <b>想我了吧</b> → 允许 <b>通知</b>、允许 <b>自启动/后台运行</b>。</p>' +
+                '<p>3. 电池管理里选 <b>无限制 / 不优化</b>，否则省电模式可能压掉闹钟。</p>' +
+                '<p>4. 部分国产 ROM（小米/华为/OPPO/vivo）还需要在「电池 → 应用省电策略」里设为无限制。</p>' +
+                '<p style="margin-top:10px">关于网页版：浏览器在页面关闭后会冻结定时器，所以 <b>网页版无法在后台准时提醒</b>，这是浏览器限制，不是 bug。想后台也收到，请装 App。</p>' +
+                '<p style="margin-top:10px">数据只存在这台手机上，备份请用 <b>导出备份</b> 保存 JSON 文件。</p>' +
+                '</div>' +
+                '<button class="block small" style="margin-top:14px" onclick="closeSheet()">知道了</button>');
+        }
+        function resetAll() {
+            openSheet('<h3>清空全部数据</h3>' +
+                '<div class="dev-note" style="margin-top:8px">句子、打卡记录、收藏、设置都会被删掉，恢复成刚装好的样子。建议先导出备份。</div>' +
+                '<button class="primary block danger" id="rsYes" style="margin-top:14px">确认清空</button>' +
+                '<button class="block ghost small" style="margin-top:8px" onclick="closeSheet()">算了</button>');
+            $('rsYes').onclick = function () {
+                state = defaultState();
+                save();
+                rebuildPlan(true);
+                boot(true);
+                closeSheet();
+                toast('已恢复初始状态');
+            };
+        }
+        /* ---------- 今天页：手动挑分类 ---------- */
+        var catPref = '';
+        function renderCatFilter() {
+            $('catFilter').innerHTML = '<button data-cat="" class="' + (catPref === '' ? 'on' : '') + '">🎲 随机</button>' +
+                CATS.map(function (c) {
+                    return '<button data-cat="' + c.key + '" class="' + (catPref === c.key ? 'on' : '') + '">' + c.emoji + ' ' + c.name + '</button>';
+                }).join('');
+        }
+        function copyCard() {
+            if (!card.text) { return; }
+            var txt = card.text;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(function () { toast('已复制'); }, function () { toast('复制失败，长按文字手动复制吧'); });
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = txt;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); toast('已复制'); } catch (e) { toast('复制失败'); }
+                ta.remove();
+            }
+        }
+        function shareCard() {
+            if (!card.text) { return; }
+            if (navigator.share) {
+                navigator.share({ text: card.text }).catch(function () { });
+            } else {
+                copyCard();
+            }
+        }
+        function toggleFav() {
+            var s = card.sid ? findSentence(card.sid) : null;
+            if (!s) {
+                /* 卡片上的句子不在库里（比如语料被清空过），就存成一条再收藏 */
+                saveCardAsMine();
+                return;
+            }
+            s.fav = !s.fav;
+            save();
+            renderCard();
+            if ($('view-sentences').classList.contains('active')) { renderSentences(); }
+            toast(s.fav ? '已收藏，会更容易被选中' : '取消收藏');
+        }
+        /* ================= 事件绑定 ================= */
+        function bindEvents() {
+            /* 底部导航 */
+            $('tabbar').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                switchTab(b.getAttribute('data-tab'));
+            };
+            /* 今天页 */
+            $('btnNext').onclick = function () { rollSentence(catPref); };
+            $('btnFav').onclick = toggleFav;
+            $('btnCopy').onclick = copyCard;
+            $('btnShare').onclick = shareCard;
+            $('btnAddMine').onclick = saveCardAsMine;
+            $('catFilter').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                catPref = b.getAttribute('data-cat');
+                renderCatFilter();
+                rollSentence(catPref);
+            };
+            /* 打卡页 */
+            $('moodPicker').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                draft.mood = parseInt(b.getAttribute('data-mood'), 10) || 0;
+                var all = $('moodPicker').getElementsByTagName('button');
+                for (var i = 0; i < all.length; i++) {
+                    all[i].classList.toggle('on', all[i] === b);
+                }
+            };
+            $('tagBox').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                var t = b.getAttribute('data-tag');
+                var k = draft.tags.indexOf(t);
+                if (k >= 0) { draft.tags.splice(k, 1); } else { draft.tags.push(t); }
+                b.classList.toggle('on', k < 0);
+            };
+            $('btnSaveMood').onclick = saveMood;
+            $('btnMoodHistory').onclick = showMoodHistory;
+            /* 句子页 */
+            $('btnBulkAdd').onclick = showBulk;
+            $('btnNewOne').onclick = function () { editSentence(''); };
+            $('btnExport').onclick = exportBackup;
+            $('btnExport2').onclick = exportBackup;
+            $('btnImport').onclick = function () { $('fileInput').click(); };
+            $('fileInput').onchange = function () {
+                if (this.files && this.files[0]) { importBackup(this.files[0]); }
+                this.value = '';
+            };
+            $('btnClearBuiltin').onclick = clearBuiltin;
+            $('sentFilter').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                sentFilter = b.getAttribute('data-cat');
+                renderSentences();
+            };
+            $('sentList').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                var id = b.getAttribute('data-fav') || b.getAttribute('data-edit') || b.getAttribute('data-del');
+                if (!id) { return; }
+                var s = findSentence(id);
+                if (!s) { return; }
+                if (b.hasAttribute('data-fav')) {
+                    s.fav = !s.fav;
+                    save();
+                    renderSentences();
+                    renderCard();
+                } else if (b.hasAttribute('data-edit')) {
+                    editSentence(id);
+                } else {
+                    state.sentences = state.sentences.filter(function (x) { return x.id !== id; });
+                    save();
+                    rebuildPlan(true);
+                    renderSentences();
+                    renderStats();
+                    toast('删掉一句');
+                }
+            };
+            /* 设置页 */
+            $('setAppName').onchange = function () {
+                state.settings.appName = (this.value || '').trim().slice(0, 12) || '想我了吧';
+                this.value = state.settings.appName;
+                save();
+                renderTopbar();
+                rebuildPlan(true);
+                toast('名字改好了');
+            };
+            $('setDailyMax').onchange = function () {
+                var v = parseInt(this.value, 10);
+                if (isNaN(v)) { v = 4; }
+                v = Math.max(1, Math.min(12, v));
+                this.value = v;
+                state.settings.dailyMax = v;
+                save();
+                rebuildPlan(false);
+            };
+            $('setQuietS').onchange = function () {
+                state.settings.quiet.s = this.value || '23:30';
+                save();
+                rebuildPlan(false);
+            };
+            $('setQuietE').onchange = function () {
+                state.settings.quiet.e = this.value || '07:30';
+                save();
+                rebuildPlan(false);
+            };
+            $('setNotify').onchange = function () {
+                var on = this.checked;
+                state.settings.notify = on;
+                save();
+                if (on) {
+                    requestNotifyPermission(function (okp) {
+                        if (!okp) { toast('没拿到通知权限，只能在页面内提醒'); }
+                        renderSettings();
+                    });
+                } else {
+                    renderSettings();
+                }
+            };
+            $('setVibrate').onchange = function () { state.settings.vibrate = this.checked; save(); if (this.checked) { localAlert('大概就是这个感觉'); } };
+            $('setSound').onchange = function () { state.settings.sound = this.checked; save(); if (this.checked) { beep(); } };
+            $('btnAddWindow').onclick = function () {
+                var st = state.settings;
+                if (st.windows.length >= 6) { toast('时间段最多 6 个'); return; }
+                st.windows.push({ s: '19:00', e: '22:00' });
+                save();
+                renderWindows();
+                rebuildPlan(false);
+            };
+            $('windowList').onchange = function (e) {
+                var el = e.target;
+                if (el.hasAttribute && el.hasAttribute('data-ws')) {
+                    state.settings.windows[parseInt(el.getAttribute('data-ws'), 10)].s = el.value || '08:00';
+                    save();
+                    rebuildPlan(false);
+                } else if (el.hasAttribute && el.hasAttribute('data-we')) {
+                    state.settings.windows[parseInt(el.getAttribute('data-we'), 10)].e = el.value || '12:00';
+                    save();
+                    rebuildPlan(false);
+                }
+            };
+            $('windowList').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b || !b.hasAttribute('data-wdel')) { return; }
+                var i = parseInt(b.getAttribute('data-wdel'), 10);
+                state.settings.windows.splice(i, 1);
+                save();
+                renderWindows();
+                rebuildPlan(false);
+            };
+            $('btnTestNotify').onclick = function () {
+                var pick = pickSentence(state, {});
+                var body = pick ? pick.text : '我在呢，一直都在。';
+                requestNotifyPermission(function () {
+                    localAlert(body);
+                    notifyNow(state.settings.appName, body);
+                    if (NATIVE) { rebuildPlan(true); }
+                });
+            };
+            $('btnGuide').onclick = showGuide;
+            $('btnReset').onclick = resetAll;
+            /* 弹层：点空白关掉 */
+            $('sheetMask').onclick = function (e) {
+                if (e.target === $('sheetMask')) { closeSheet(); }
+            };
+            /* 回到前台时补一次检查（网页版只有页面可见时才能跑） */
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    tick();
+                    renderTopbar();
+                    /* App 里顺手把系统闹钟刷一遍，防止清单被系统清掉 */
+                    if (NATIVE) { pushNative(); }
+                }
+            });
+            window.addEventListener('focus', function () { tick(); });
+        }
+
+        /* ================= 启动 ================= */
+        function boot(keepTab) {
+            var cur = $('tabbar').querySelector('button.on');
+            renderTopbar();
+            renderCatFilter();
+            renderCard();
+            renderRecent();
+            renderHints();
+            renderStats();
+            renderSettings();
+            switchTab(keepTab && cur ? cur.getAttribute('data-tab') : 'today');
+            if (!state.settings.paused && state.sentences.length && (!state.planBuiltAt || state.plan.length === 0)) {
+                rebuildPlan(true);
+            }
+        }
+        /* 自检：浏览器打开 mood.html?selftest=1 就能看到全部结果 */
+        function showSelfTest() {
+            var res = runSelfTest(defaultState);
+            var html = '<b>自检结果：' + res.pass + ' / ' + res.total + (res.allPass ? '  全部通过 ✅' : '  有失败项 ❌') + '</b>\n\n';
+            res.list.forEach(function (r) {
+                html += '<span class="' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? '✔' : '✘') + ' ' + esc(r.name) + '</span>' +
+                    (r.info ? '  <span style="opacity:.55">' + esc(r.info) + '</span>' : '') + '\n';
+            });
+            html += '\n<button class="small" onclick="document.getElementById(\'selftest\').classList.remove(\'show\')">关闭自检</button>';
+            var box = $('selftest');
+            box.innerHTML = html;
+            box.classList.add('show');
+            return res;
+        }
+        (function init() {
+            state = loadState();
+            bindEvents();
+            boot(false);
+            tick();
+            /* App 里每次启动都重新把计划写进系统闹钟（重启 / 被清后台后也不会丢） */
+            if (NATIVE) { pushNative(); }
+            /* 从后台切回前台：补一次检查并把系统闹钟刷新一遍 */
+            if (NATIVE && CAP && CAP.Plugins && CAP.Plugins.App && CAP.Plugins.App.addListener) {
+                try {
+                    var h = CAP.Plugins.App.addListener('appStateChange', function (st) {
+                        if (st && st.isActive) { tick(); renderTopbar(); pushNative(); }
+                    });
+                    if (h && h.catch) { h.catch(function () { }); }
+                } catch (e) { }
+            }
+            setInterval(tick, 30000);
+            window.addEventListener('beforeunload', save);
+            if (/[?&]selftest=1/.test(location.search)) { showSelfTest(); }
+            /* 离线缓存（可选，失败不影响使用） */
+            if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+                navigator.serviceWorker.register('sw.js').catch(function () { });
+            }
+        })();
+    </script>
+</body>
+
+</html>
