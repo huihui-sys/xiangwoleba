@@ -10,6 +10,25 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>想我了吧</title>
     <link rel="manifest" href="manifest.webmanifest">
+    <script>
+        /* 主题要在首屏渲染前定好，否则会先闪一下深色（正式逻辑在 applyTheme） */
+        (function () {
+            var t = 'auto';
+            try {
+                var raw = localStorage.getItem('xwlb.v1');
+                if (raw) {
+                    var s = JSON.parse(raw);
+                    if (s && s.settings && s.settings.theme) { t = s.settings.theme; }
+                }
+            } catch (e) { }
+            if (t !== 'light' && t !== 'dark') {
+                t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', t);
+            var m = document.querySelector('meta[name="theme-color"]');
+            if (m) { m.setAttribute('content', t === 'light' ? '#f4f5fa' : '#0f1117'); }
+        })();
+    </script>
     <style>
         :root {
             --bg: #0f1117;
@@ -25,6 +44,49 @@
             --warn: #ffd166;
             --radius: 16px;
             --radius-s: 12px;
+            /* 下面这些是「主题相关」的颜色，白昼主题只覆盖它们 */
+            --bg-glow: #2b2036;
+            --hero-glow: #2a2036;
+            --top-bg: rgba(15, 17, 23, .82);
+            --tab-bg: rgba(15, 17, 23, .93);
+            --input-bg: #11141d;
+            --switch-off: #333a4d;
+            --bar-none: #2c3244;
+            --mask-bg: rgba(6, 8, 12, .66);
+            --toast-bg: rgba(40, 46, 62, .97);
+            --toast-fg: #ffffff;
+            --primary-fg: #2a1620;
+            --danger-fg: #ff8f9c;
+            --code-bg: #0b0d13;
+            --code-ok: #6ee7a8;
+            --code-bad: #ff8f9c;
+        }
+        /* 白昼主题：只换颜色，布局完全一致 */
+        html[data-theme="light"] {
+            --bg: #f4f5fa;
+            --card: #ffffff;
+            --card2: #f4f5fa;
+            --line: #e4e6f0;
+            --fg: #1b1f2b;
+            --fg2: #5d6478;
+            --fg3: #8b92a6;
+            --ok: #1c9d6b;
+            --warn: #a9750e;
+            --bg-glow: #ffe6ee;
+            --hero-glow: #fff0f5;
+            --top-bg: rgba(255, 255, 255, .86);
+            --tab-bg: rgba(255, 255, 255, .94);
+            --input-bg: #f7f8fc;
+            --switch-off: #ccd1e0;
+            --bar-none: #e6e8f0;
+            --mask-bg: rgba(24, 26, 36, .42);
+            --toast-bg: rgba(40, 46, 62, .95);
+            --toast-fg: #ffffff;
+            --primary-fg: #ffffff;
+            --danger-fg: #d1374f;
+            --code-bg: #f2f3f8;
+            --code-ok: #1c8f5f;
+            --code-bad: #c1264a;
         }
         * {
             box-sizing: border-box;
@@ -32,7 +94,7 @@
         }
         html, body { margin: 0; padding: 0; }
         body {
-            background: radial-gradient(1200px 620px at 50% -12%, #2b2036 0%, var(--bg) 58%) no-repeat fixed;
+            background: radial-gradient(1200px 620px at 50% -12%, var(--bg-glow) 0%, var(--bg) 58%) no-repeat fixed;
             background-color: var(--bg);
             color: var(--fg);
             font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
@@ -53,7 +115,7 @@
             top: 0;
             z-index: 30;
             padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
-            background: rgba(15, 17, 23, .82);
+            background: var(--top-bg);
             backdrop-filter: saturate(160%) blur(14px);
             -webkit-backdrop-filter: saturate(160%) blur(14px);
             border-bottom: 1px solid var(--line);
@@ -121,18 +183,18 @@
         button.primary {
             background: linear-gradient(92deg, var(--accent), var(--accent2));
             border-color: transparent;
-            color: #2a1620;
+            color: var(--primary-fg);
             font-weight: 700;
             box-shadow: 0 6px 18px -8px var(--accent);
         }
         button.ghost { background: transparent; }
         button.small { padding: 7px 10px; font-size: 13px; border-radius: 10px; }
-        button.danger { color: #ff8f9c; }
+        button.danger { color: var(--danger-fg); }
         button.block { width: 100%; }
         button[disabled] { opacity: .45; }
         input[type="text"], input[type="time"], input[type="number"], textarea, select {
             width: 100%;
-            background: #11141d;
+            background: var(--input-bg);
             border: 1px solid var(--line);
             border-radius: var(--radius-s);
             padding: 11px 12px;
@@ -142,7 +204,7 @@
         textarea { resize: vertical; min-height: 130px; line-height: 1.75; }
         .switch { position: relative; width: 50px; height: 29px; flex: 0 0 auto; }
         .switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; z-index: 2; }
-        .switch i { position: absolute; inset: 0; background: #333a4d; border-radius: 999px; transition: .2s; }
+        .switch i { position: absolute; inset: 0; background: var(--switch-off); border-radius: 999px; transition: .2s; }
         .switch i::after {
             content: ""; position: absolute; width: 23px; height: 23px; border-radius: 50%;
             background: #fff; top: 3px; left: 3px; transition: .2s;
@@ -155,7 +217,7 @@
             overflow: hidden;
             text-align: center;
             padding: 30px 18px 22px;
-            background: linear-gradient(160deg, #2a2036 0%, var(--card) 62%);
+            background: linear-gradient(160deg, var(--hero-glow) 0%, var(--card) 62%);
         }
         .hero::after {
             content: "";
@@ -205,7 +267,7 @@
             display: block; border-radius: 6px 6px 3px 3px; min-height: 4px;
             background: linear-gradient(180deg, var(--accent), rgba(255, 111, 145, .25));
         }
-        .bars .b.none i { background: #2c3244; }
+        .bars .b.none i { background: var(--bar-none); }
         .bars .b span { text-align: center; font-size: 11px; color: var(--fg3); margin-top: 6px; }
         /* ---- 句子列表 ---- */
         .sent {
@@ -222,7 +284,7 @@
             position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
             display: flex;
             padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
-            background: rgba(15, 17, 23, .93);
+            background: var(--tab-bg);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-top: 1px solid var(--line);
@@ -235,7 +297,7 @@
         .tabbar button.on { color: var(--accent); background: rgba(255, 111, 145, .09); }
         /* ---- 弹层 / 提示 ---- */
         .mask {
-            position: fixed; inset: 0; z-index: 60; background: rgba(6, 8, 12, .66);
+            position: fixed; inset: 0; z-index: 60; background: var(--mask-bg);
             display: none; align-items: flex-end;
         }
         .mask.show { display: flex; }
@@ -251,12 +313,24 @@
         .toast {
             position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom));
             transform: translateX(-50%);
-            background: rgba(40, 46, 62, .97); color: #fff;
+            background: var(--toast-bg); color: var(--toast-fg);
             padding: 10px 16px; border-radius: 999px; font-size: 14px;
             z-index: 90; opacity: 0; pointer-events: none; transition: .25s;
             max-width: 84vw; text-align: center;
         }
         .toast.show { opacity: 1; bottom: calc(108px + env(safe-area-inset-bottom)); }
+        /* App 里到点时从屏幕顶部滑出来的横幅（系统通知之外的兜底提示） */
+        .banner {
+            position: fixed; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top));
+            z-index: 80; background: var(--card); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 12px 14px;
+            box-shadow: 0 14px 34px -16px rgba(0, 0, 0, .6);
+            transform: translateY(-150%); opacity: 0; pointer-events: none; transition: .28s ease;
+        }
+        .banner.show { transform: none; opacity: 1; pointer-events: auto; }
+        .banner .bt { font-size: 12px; color: var(--accent2); letter-spacing: .3px; }
+        .banner .bb { font-size: 16px; line-height: 1.6; margin-top: 4px; }
+        .banner button { margin-top: 10px; }
         .guide { font-size: 14px; color: var(--fg2); line-height: 1.85; }
         .guide b { color: var(--fg); }
         .kv { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
@@ -265,12 +339,12 @@
         .dev-note { font-size: 12px; color: var(--fg3); margin-top: 6px; }
         #selftest {
             position: fixed; inset: 0; z-index: 200; overflow: auto; padding: 16px;
-            background: #0b0d13; font-family: Consolas, Menlo, monospace; font-size: 12px;
+            background: var(--code-bg); font-family: Consolas, Menlo, monospace; font-size: 12px;
             white-space: pre-wrap; line-height: 1.6; display: none;
         }
         #selftest.show { display: block; }
-        #selftest .ok { color: #6ee7a8; }
-        #selftest .bad { color: #ff8f9c; }
+        #selftest .ok { color: var(--code-ok); }
+        #selftest .bad { color: var(--code-bad); }
     </style>
 </head>
 
@@ -330,8 +404,11 @@
             </div>
 
             <div class="card">
-                <div class="muted" style="margin-bottom:8px">想对自己说点什么？（选填）</div>
-                <textarea id="moodNote" rows="3" placeholder="今天有点累，但事情都做完了"></textarea>
+                <div class="row between" style="margin-bottom:8px">
+                    <span class="muted">想对自己说点什么？（选填）</span>
+                    <span class="tiny" id="noteCount">0 / 200</span>
+                </div>
+                <textarea id="moodNote" rows="3" maxlength="200" placeholder="今天有点累，但事情都做完了"></textarea>
                 <button class="primary block" id="btnSaveMood" style="margin-top:12px">保存今天的心情</button>
                 <div class="dev-note">心情会影响 App 主动找你说什么：低落时多安慰陪伴，开心时多夸夸你。</div>
             </div>
@@ -405,6 +482,13 @@
                 </div>
             </div>
 
+            <div class="sec-title">外观</div>
+            <div class="card">
+                <div class="muted" style="margin-bottom:8px">主题（选「跟随系统」时，手机切成深色就一起变）</div>
+                <div class="catfilter" id="themePicker"></div>
+                <div class="dev-note">只影响页面配色；桌面图标和启动闪屏仍是深色。</div>
+            </div>
+
             <div class="sec-title">通知</div>
             <div class="card">
                 <div class="row between">
@@ -419,8 +503,12 @@
                     <div class="grow">提示音（App 内）</div>
                     <div class="switch"><input type="checkbox" id="setSound"><i></i></div>
                 </div>
-                <button class="block small" id="btnTestNotify" style="margin-top:12px">发一条测试通知</button>
+                <div class="row" style="gap:8px;margin-top:12px">
+                    <button class="small grow" id="btnTestNotify">测试通知（立刻）</button>
+                    <button class="small grow" id="btnTestLater">30 秒后测试</button>
+                </div>
                 <div class="dev-note" id="notifyState"></div>
+                <div class="dev-note" id="diagLine">运行环境检测中…</div>
             </div>
 
             <div class="sec-title">数据</div>
@@ -448,8 +536,12 @@
 
     <div class="mask" id="sheetMask"><div class="sheet" id="sheetBody"></div></div>
     <div class="toast" id="toast"></div>
+    <div class="banner" id="banner">
+        <div class="bt" id="bannerTitle">想我了吧</div>
+        <div class="bb" id="bannerBody"></div>
+        <button class="small ghost" id="bannerClose">知道了</button>
+    </div>
     <div id="selftest"></div>
-    </main>
     <script>
         /* ==== PURE_ENGINE_START ==== */
         /* 纯逻辑区：不碰 DOM、不碰 localStorage，可被 scripts/selftest.js 抽到 Node 里跑 */
@@ -850,8 +942,16 @@
         var CAP = window.Capacitor || null;
         var NATIVE = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
         var LocalNotif = (CAP && CAP.Plugins && CAP.Plugins.LocalNotifications) || null;
+        var CHANNEL_ID = 'xwlb';        /* 自建高优先级通道：插件自带的 default 改不了重要性，弹不出横幅 */
+        var ASKED_KEY = 'xwlb.notifyAsked';  /* 记一下「有没有问过通知权限」，免得每次打开都弹框 */
+        var NOTIFY_OK = false;          /* 是否已经拿到系统通知权限 */
         var state = null;
         var card = { text: '', cat: '', sid: '', locked: false };
+        var THEMES = [
+            { id: 'auto', name: '跟随系统' },
+            { id: 'dark', name: '黑夜' },
+            { id: 'light', name: '白昼' }
+        ];
 
         function $(id) { return document.getElementById(id); }
         function esc(s) {
@@ -864,6 +964,7 @@
                 version: 1,
                 settings: {
                     appName: '想我了吧',
+                    theme: 'auto',
                     dailyMax: 4,
                     windows: [{ s: '08:00', e: '12:00' }, { s: '14:00', e: '18:00' }, { s: '21:00', e: '23:00' }],
                     quiet: { s: '23:30', e: '07:30' },
@@ -946,20 +1047,118 @@
                 } else { if (done) { done(); } }
             }).catch(function () { if (done) { done(); } });
         }
-        function requestNotifyPermission(cb) {
+        /* 自建通道：Android 8+ 的通道一旦建好，重要性就改不了了，
+           插件自带的 default 是低优先级（弹不出横幅），所以必须自己造一个 importance=4 的 */
+        function ensureChannel() {
+            if (!NATIVE || !LocalNotif || !LocalNotif.createChannel || ensureChannel._done) { return Promise.resolve(); }
+            ensureChannel._done = true;
+            return LocalNotif.createChannel({
+                id: CHANNEL_ID,
+                name: '到点的想你',
+                description: '到点时提醒你（高优先级：弹横幅 + 响铃 + 震动）',
+                importance: 4,
+                visibility: 1,
+                vibration: true,
+                lights: true,
+                lightColor: '#ff6f91'
+            }).catch(function () { ensureChannel._done = false; });
+        }
+        /* 申请通知权限：App 里第一次会弹系统授权框（Android 13+ 不申请就发不出通知） */
+        function ensureNotifyPermission(silent, cb) {
+            if (typeof silent === 'function') { cb = silent; silent = false; }
             if (NATIVE) {
-                if (!LocalNotif) { toast('当前环境不支持系统通知'); if (cb) { cb(false); } return; }
-                LocalNotif.requestPermissions().then(function (r) {
-                    var okp = !!(r && r.display === 'granted');
-                    if (!okp) { if (cb) { cb(false); } return; }
-                    ensureExactAlarm(function () { if (cb) { cb(true); } });
-                }).catch(function () { if (cb) { cb(false); } });
+                if (!LocalNotif) { if (!silent) { toast('当前环境不支持系统通知'); } if (cb) { cb(false); } return; }
+                ensureChannel();
+                LocalNotif.checkPermissions().then(function (r) {
+                    if (r && r.display === 'granted') { return r; }
+                    /* 没授权就直接申请：Android 13+ 不申请的话，发出去的通知会被系统丢掉。
+                       已经被拒过两次时，系统会立刻回调 denied，不会再弹框骚扰用户 */
+                    return LocalNotif.requestPermissions();
+                }).then(function (r) {
+                    NOTIFY_OK = !!(r && r.display === 'granted');
+                    if (NOTIFY_OK) { ensureChannel(); }
+                    renderNotifyDiag();
+                    if (!silent) {
+                        if (NOTIFY_OK) { toast('系统通知已开启'); ensureExactAlarm(function () { }); }
+                        else { toast('没拿到通知权限：去系统设置 → 应用 → 想我了吧 → 通知里打开', 4200); }
+                    }
+                    if (cb) { cb(NOTIFY_OK); }
+                }).catch(function () { renderNotifyDiag(); if (cb) { cb(false); } });
                 return;
             }
-            if (!('Notification' in window)) { toast('这个浏览器不支持系统通知，页面开着时仍会提醒'); if (cb) { cb(false); } return; }
-            if (Notification.permission === 'granted') { if (cb) { cb(true); } return; }
-            if (Notification.permission === 'denied') { toast('通知被拒绝了，请在浏览器设置里放开'); if (cb) { cb(false); } return; }
-            Notification.requestPermission().then(function (p) { if (cb) { cb(p === 'granted'); } });
+            if (!('Notification' in window)) {
+                if (!silent) { toast('这个浏览器不支持系统通知，页面开着时仍会提醒'); }
+                renderNotifyDiag();
+                if (cb) { cb(false); }
+                return;
+            }
+            if (Notification.permission === 'granted') { NOTIFY_OK = true; renderNotifyDiag(); if (cb) { cb(true); } return; }
+            /* 被拒过就只能等用户去浏览器设置里放开；而且必须由点击触发 */
+            if (Notification.permission === 'denied' || silent) {
+                if (!silent) { toast('通知被拒绝了，请在浏览器设置里放开', 3600); }
+                renderNotifyDiag();
+                if (cb) { cb(false); }
+                return;
+            }
+            Notification.requestPermission().then(function (p) {
+                NOTIFY_OK = (p === 'granted');
+                renderNotifyDiag();
+                if (cb) { cb(NOTIFY_OK); }
+            });
+        }
+        function requestNotifyPermission(cb) { ensureNotifyPermission(false, cb); }
+        /* App 里手动来一条（不写进计划；走原生通道，App 在前台也能看到） */
+        function nativeNotifyNow(title, body, at) {
+            if (!NATIVE || !LocalNotif) { return Promise.resolve(false); }
+            var n = {
+                id: 990001,
+                title: title,
+                body: body,
+                channelId: CHANNEL_ID,
+                autoCancel: true
+            };
+            if (at) { n.schedule = { at: at, allowWhileIdle: true }; }
+            return ensureChannel().then(function () {
+                return LocalNotif.schedule({ notifications: [n] });
+            }).then(function () { return true; }).catch(function () { return false; });
+        }
+        function pickTestBody() {
+            var pick = pickSentence(state, {});
+            return pick ? pick.text : '我在呢，一直都在。';
+        }
+        /* 设置页里显示到底卡在哪一步 */
+        function renderNotifyDiag() {
+            var el = $('diagLine');
+            if (!el) { return; }
+            if (NATIVE) {
+                el.textContent = '运行环境：App · 通知权限：' + (NOTIFY_OK ? '已允许' : '未允许') +
+                    ' · 通道：' + CHANNEL_ID + '（高优先级）' +
+                    (NOTIFY_OK ? '' : ' · 点「测试通知」可以再申请一次，或去 系统设置 → 应用 → 想我了吧 → 通知 里打开');
+            } else if (!('Notification' in window)) {
+                el.textContent = '运行环境：网页 · 这个浏览器不支持系统通知，页面开着时会在页内提醒';
+            } else {
+                el.textContent = '运行环境：网页 · 通知权限：' +
+                    ({ granted: '已允许', denied: '已拒绝', 'default': '还没问过（点上面的测试按钮才会弹框）' }[Notification.permission] || Notification.permission);
+            }
+        }
+        /* App 启动时确认一次权限：没有就申请（这一步以前一直缺，所以通知栏永远没反应） */
+        function initNotifyPermission() {
+            if (!NATIVE || !LocalNotif) { renderNotifyDiag(); return; }
+            ensureChannel();
+            LocalNotif.checkPermissions().then(function (r) {
+                NOTIFY_OK = !!(r && r.display === 'granted');
+                renderNotifyDiag();
+                if (NOTIFY_OK) { ensureExactAlarm(function () { }); return; }
+                /* 只在「从来没问过」时自动申请一次，别每次打开都弹框烦人 */
+                var asked = false;
+                try { asked = localStorage.getItem(ASKED_KEY) === '1'; } catch (e) { }
+                if (asked) { return; }
+                try { localStorage.setItem(ASKED_KEY, '1'); } catch (e) { }
+                ensureNotifyPermission(true, function (okp) {
+                    if (okp) { ensureExactAlarm(function () { }); return; }
+                    showBanner('想我了吧', '还没允许通知：去 系统设置 → 应用 → 想我了吧 → 通知 里打开，不然到点提醒看不到');
+                });
+            }).catch(function () { renderNotifyDiag(); });
         }
         function notifyNow(title, body) {
             if (canWebNotify()) {
@@ -972,6 +1171,53 @@
             if (st.vibrate && navigator.vibrate) { try { navigator.vibrate([28, 60, 28]); } catch (e) { } }
             if (st.sound) { beep(); }
             toast(body, 3600);
+        }
+        /* ---------- 页内横幅（系统通知的兜底提示） ---------- */
+        function showBanner(title, body) {
+            var b = $('banner');
+            if (!b) { return; }
+            $('bannerTitle').textContent = title;
+            $('bannerBody').textContent = body;
+            b.classList.add('show');
+            clearTimeout(showBanner._tm);
+            showBanner._tm = setTimeout(hideBanner, 8000);
+        }
+        function hideBanner() {
+            var b = $('banner');
+            if (b) { b.classList.remove('show'); }
+            clearTimeout(showBanner._tm);
+        }
+
+        /* ---------- 主题：黑夜 / 白昼 / 跟随系统 ---------- */
+        function resolveTheme() {
+            var t = (state && state.settings && state.settings.theme) || 'auto';
+            if (t !== 'light' && t !== 'dark') {
+                t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+            }
+            return t;
+        }
+        function applyTheme() {
+            var t = resolveTheme();
+            document.documentElement.setAttribute('data-theme', t);
+            var m = document.querySelector('meta[name="theme-color"]');
+            if (m) { m.setAttribute('content', t === 'light' ? '#f4f5fa' : '#0f1117'); }
+            var box = $('themePicker');
+            if (!box) { return; }
+            var cur = (state && state.settings && state.settings.theme) || 'auto';
+            box.innerHTML = THEMES.map(function (x) {
+                return '<button data-theme-pick="' + x.id + '" class="' + (cur === x.id ? 'on' : '') + '">' +
+                    (x.id === 'auto' ? '🌗 ' : (x.id === 'dark' ? '🌙 ' : '☀️ ')) + esc(x.name) + '</button>';
+            }).join('');
+        }
+        /* 手机随系统切深浅色时，选了「跟随系统」就实时跟着变 */
+        function watchSystemTheme() {
+            if (!window.matchMedia) { return; }
+            var mq = window.matchMedia('(prefers-color-scheme: light)');
+            var on = function () {
+                if (((state.settings.theme) || 'auto') === 'auto') { applyTheme(); }
+            };
+            if (mq.addEventListener) { mq.addEventListener('change', on); }
+            else if (mq.addListener) { mq.addListener(on); }
         }
 
         /* ---------- 排程：预生成内容，交给系统闹钟 ---------- */
@@ -1006,8 +1252,13 @@
             renderCard();
             renderRecent();
             renderStats();
-            /* App 里由系统通知负责弹出，页面内只做提示，避免双重打扰 */
-            if (!NATIVE) { localAlert(p.text); notifyNow(state.settings.appName, p.text); }
+            /* App 里正常由系统通知负责弹；万一没拿到通知权限，就退回页内横幅 */
+            if (!NATIVE) {
+                localAlert(p.text);
+                notifyNow(state.settings.appName, p.text);
+            } else if (!NOTIFY_OK) {
+                showBanner(state.settings.appName, p.text);
+            }
         }
         function tick() {
             var now = Date.now();
@@ -1025,6 +1276,7 @@
         /* 把未来计划写进系统闹钟（关掉 App、没网也能到点弹） */
         function pushNative() {
             if (!NATIVE || !LocalNotif) { return; }
+            ensureChannel();
             var list = state.plan.filter(function (p) { return !p.fired; }).slice(0, 48);
             var notifs = list.map(function (p, i) {
                 return {
@@ -1032,14 +1284,16 @@
                     title: state.settings.appName,
                     body: p.text,
                     schedule: { at: new Date(p.at), allowWhileIdle: true },
-                    channelId: 'default',
+                    channelId: CHANNEL_ID,
                     autoCancel: true
                 };
             });
             var note = $('schedNote');
             LocalNotif.getPending().then(function (res) {
                 var old = (res && res.notifications) ? res.notifications : [];
-                return old.length ? LocalNotif.cancel({ notifications: old }) : null;
+                /* 只清自己排的计划（id 1~48），别顺手把「30 秒后测试」那条也取消了 */
+                var mine = old.filter(function (n) { return n && n.id >= 1 && n.id < 100; });
+                return mine.length ? LocalNotif.cancel({ notifications: mine }) : null;
             }).then(function () {
                 if (!notifs.length) { return null; }
                 return LocalNotif.schedule({ notifications: notifs });
@@ -1172,9 +1426,16 @@
             $('tagBox').innerHTML = MOOD_TAGS.map(function (t) {
                 return '<button data-tag="' + esc(t) + '" class="' + (draft.tags.indexOf(t) >= 0 ? 'on' : '') + '">' + esc(t) + '</button>';
             }).join('');
-            $('moodNote').value = draft.note;
+            var ta = $('moodNote');
+            /* 只有内容真的变了才写回去：不然正在打字时整段被重写，光标会跳到末尾 */
+            if (ta.value !== draft.note) { ta.value = draft.note; }
+            updateNoteCount();
             renderTrend();
             renderTopbar();
+        }
+        function updateNoteCount() {
+            var el = $('noteCount'), ta = $('moodNote');
+            if (el && ta) { el.textContent = ta.value.length + ' / 200'; }
         }
         function renderTrend() {
             var box = $('trendBars'), html = '', sum = 0, cnt = 0;
@@ -1440,7 +1701,8 @@
             renderHints();
             var msg;
             if (NATIVE) {
-                msg = 'App 模式：内容会提前排进系统闹钟，关掉 App 也能收到。建议在系统设置里允许「自启动」并关掉省电限制。';
+                msg = (NOTIFY_OK ? 'App 模式：系统通知已允许，' : 'App 模式：⚠️ 还没拿到通知权限（去系统设置里允许），') +
+                    '内容会提前排进系统闹钟，关掉 App 也能收到。建议允许「自启动」并关掉省电限制。';
             } else if (!('Notification' in window)) {
                 msg = '这个浏览器不支持系统通知：只在你打开页面时提醒。装成 App 后就能后台提醒。';
             } else if (Notification.permission === 'granted') {
@@ -1451,14 +1713,25 @@
                 msg = '还没允许通知：点上面的按钮授权。';
             }
             $('notifyState').textContent = msg;
+            applyTheme();
+            renderNotifyDiag();
+            /* App 里顺手问一下系统「现在到底给不给发通知」（不弹框） */
+            if (NATIVE && LocalNotif && LocalNotif.checkPermissions) {
+                LocalNotif.checkPermissions().then(function (r) {
+                    NOTIFY_OK = !!(r && r.display === 'granted');
+                    renderNotifyDiag();
+                }).catch(function () { });
+            }
         }
         function showGuide() {
             openSheet('<h3>装成 App 后怎么才能准时收到</h3>' +
                 '<div class="guide" style="margin-top:10px">' +
-                '<p>1. 打开 App 一次，让它把未来几天的句子排进系统闹钟（设置页会显示排了多少条）。</p>' +
-                '<p>2. 手机设置 → 应用管理 → <b>想我了吧</b> → 允许 <b>通知</b>、允许 <b>自启动/后台运行</b>。</p>' +
-                '<p>3. 电池管理里选 <b>无限制 / 不优化</b>，否则省电模式可能压掉闹钟。</p>' +
-                '<p>4. 部分国产 ROM（小米/华为/OPPO/vivo）还需要在「电池 → 应用省电策略」里设为无限制。</p>' +
+                '<p>1. 第一次打开 App 会弹出「允许通知」，一定要点 <b>允许</b>——Android 13 及以上如果不给权限，之后发出去的通知会被系统直接丢掉，通知栏里一点痕迹都没有。</p>' +
+                '<p>2. 打开 App 一次，让它把未来几天的句子排进系统闹钟（设置页会显示排了多少条，以及现在有没有通知权限）。</p>' +
+                '<p>3. 手机设置 → 应用管理 → <b>想我了吧</b> → 允许 <b>通知</b>、允许 <b>自启动/后台运行</b>。</p>' +
+                '<p>4. 电池管理里选 <b>无限制 / 不优化</b>，否则省电模式可能压掉闹钟。</p>' +
+                '<p>5. 部分国产 ROM（小米/华为/OPPO/vivo）还需要在「电池 → 应用省电策略」里设为无限制。</p>' +
+                '<p style="margin-top:10px">不放心的话，去设置页点 <b>测试通知（立刻）</b> 或 <b>30 秒后测试</b>，能弹出来就说明通了；实在没有权限时，App 里也会用顶部横幅提醒你。</p>' +
                 '<p style="margin-top:10px">关于网页版：浏览器在页面关闭后会冻结定时器，所以 <b>网页版无法在后台准时提醒</b>，这是浏览器限制，不是 bug。想后台也收到，请装 App。</p>' +
                 '<p style="margin-top:10px">数据只存在这台手机上，备份请用 <b>导出备份</b> 保存 JSON 文件。</p>' +
                 '</div>' +
@@ -1674,13 +1947,52 @@
                 renderWindows();
                 rebuildPlan(false);
             };
+            /* 外观页：切主题 */
+            $('themePicker').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                state.settings.theme = b.getAttribute('data-theme-pick') || 'auto';
+                save();
+                applyTheme();
+                toast(state.settings.theme === 'auto' ? '跟着手机走' :
+                    (state.settings.theme === 'light' ? '白天模式，亮一点' : '夜晚模式，护眼一点'));
+            };
+            /* 打卡页：输入框只更新计数，绝不重写内容（重写会把光标甩到末尾） */
+            $('moodNote').oninput = function () {
+                draft.note = this.value;
+                updateNoteCount();
+            };
+            $('bannerClose').onclick = hideBanner;
+            /* 通知测试：立刻来一条 */
             $('btnTestNotify').onclick = function () {
-                var pick = pickSentence(state, {});
-                var body = pick ? pick.text : '我在呢，一直都在。';
-                requestNotifyPermission(function () {
-                    localAlert(body);
-                    notifyNow(state.settings.appName, body);
-                    if (NATIVE) { rebuildPlan(true); }
+                var body = pickTestBody();
+                requestNotifyPermission(function (okp) {
+                    if (!NATIVE) {
+                        localAlert(body);
+                        notifyNow(state.settings.appName, body);
+                        return;
+                    }
+                    if (!okp) { showBanner(state.settings.appName, body); toast('系统通知没权限，先用页内横幅顶一下', 3200); return; }
+                    nativeNotifyNow(state.settings.appName, body).then(function (ok) {
+                        if (ok) { toast('发出去了，看看屏幕顶部', 2600); }
+                        else { showBanner(state.settings.appName, body); toast('没弹出来，先用页内横幅顶一下', 3200); }
+                    });
+                });
+            };
+            /* 通知测试：30 秒后（可以锁屏 / 切后台看真实效果） */
+            $('btnTestLater').onclick = function () {
+                var body = pickTestBody();
+                var at = new Date(Date.now() + 30000);
+                requestNotifyPermission(function (okp) {
+                    if (!NATIVE || !okp) {
+                        toast('先别关页面，30 秒后在这里提醒你', 3200);
+                        setTimeout(function () { localAlert(body); showBanner(state.settings.appName, body); }, 30000);
+                        return;
+                    }
+                    nativeNotifyNow(state.settings.appName, body, at).then(function (ok) {
+                        if (ok) { toast('排好了：' + pad2(at.getHours()) + ':' + pad2(at.getMinutes()) + ' 会弹，可以锁屏试试', 3600); }
+                        else { toast('排程失败，30 秒后用页内横幅提醒', 3600); setTimeout(function () { showBanner(state.settings.appName, body); }, 30000); }
+                    });
                 });
             };
             $('btnGuide').onclick = showGuide;
@@ -1711,6 +2023,7 @@
             renderHints();
             renderStats();
             renderSettings();
+            applyTheme();
             switchTab(keepTab && cur ? cur.getAttribute('data-tab') : 'today');
             if (!state.settings.paused && state.sentences.length && (!state.planBuiltAt || state.plan.length === 0)) {
                 rebuildPlan(true);
@@ -1735,6 +2048,9 @@
             bindEvents();
             boot(false);
             tick();
+            watchSystemTheme();
+            /* 通知权限必须在启动时就确认：Android 13+ 没授权的话，发出去的通知会被系统直接丢掉 */
+            initNotifyPermission();
             /* App 里每次启动都重新把计划写进系统闹钟（重启 / 被清后台后也不会丢） */
             if (NATIVE) { pushNative(); }
             /* 从后台切回前台：补一次检查并把系统闹钟刷新一遍 */
