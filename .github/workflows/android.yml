@@ -1,6 +1,7 @@
 name: Build Android APK
 
 # 手动点按钮就能打包，也可以推 mood.html 时自动打包
+# 产物是固定签名的 release 包（artifact: xwlb-release-apk），可以直接覆盖安装、数据不丢
 on:
   workflow_dispatch:
   push:
@@ -47,19 +48,65 @@ jobs:
       - name: 生成 Android 工程
         run: npx cap add android
 
-      - name: 应用 Android 补丁（权限 / 应用名）
+      - name: 准备签名密钥
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_B64:-}" ]; then
+            echo "::error::缺少仓库 Secret ANDROID_KEYSTORE_BASE64。请到 仓库 → Settings → Secrets and variables → Actions 配置 4 个 Secrets，详见 README「固定签名」一节。"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/xwlb.jks"
+          test -s "$RUNNER_TEMP/xwlb.jks" || { echo "::error::密钥文件写出来是空的，ANDROID_KEYSTORE_BASE64 可能不对"; exit 1; }
+          {
+            echo "XWLB_KEYSTORE_PATH=$RUNNER_TEMP/xwlb.jks"
+            echo "XWLB_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            echo "XWLB_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
+            echo "XWLB_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}"
+            echo "XWLB_VERSION_CODE=${{ github.run_number }}"
+          } >> "$GITHUB_ENV"
+          echo "✔ 密钥已就绪：$RUNNER_TEMP/xwlb.jks（$(wc -c < "$RUNNER_TEMP/xwlb.jks") 字节）"
+
+      - name: 应用 Android 补丁（权限 / 应用名 / 固定签名 / 版本号）
+        env:
+          XWLB_REQUIRE_SIGNING: '1'
         run: node scripts/patch-android.js
 
       - name: 同步网页资源到工程
         run: npx cap sync android
 
-      - name: 打 debug APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: 打 release APK（固定签名）
+        run: cd android && chmod +x gradlew && ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: 校验签名并写构建摘要
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          test -f "$APK" || { echo "::error::没找到 $APK"; exit 1; }
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$SDK" || { echo "::error::没找到 Android SDK（ANDROID_HOME 为空）"; exit 1; }
+          BT="$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)"
+          "$BT/apksigner" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          {
+            echo "### ✅ 想我了吧 · APK 构建完成"
+            echo ""
+            echo "- versionCode：\`${{ github.run_number }}\`（= Actions 运行序号，每次自动 +1）"
+            echo "- 版本：\`$(node -p "require('./package.json').version")\`"
+            echo "- 文件：\`app-release.apk\`（$(du -h "$APK" | cut -f1)）"
+            echo ""
+            echo '```'
+            grep -E 'Signer #1 certificate' "$RUNNER_TEMP/certs.txt" || true
+            grep -E '^Verified using' "$RUNNER_TEMP/certs.txt" || true
+            echo '```'
+            echo ""
+            echo "证书 SHA-256 每次都应该是同一个值（签名固定，可直接覆盖安装）。"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 上传 APK
         uses: actions/upload-artifact@v7
         with:
-          name: xwlb-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: xwlb-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30

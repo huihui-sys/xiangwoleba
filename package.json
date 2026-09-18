@@ -1,17 +1,17 @@
 {
     "name": "xiangwoleba",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "private": true,
     "description": "想我了吧 —— 温柔的自用情感支持小应用（网页 + Android 打包）",
     "scripts": {
         "check": "node scripts/check.js",
         "selftest": "node scripts/selftest.js",
-        "test": "node scripts/check.js && node scripts/selftest.js",
+        "test": "node scripts/check.js && node scripts/selftest.js && node scripts/check-android-patch.js",
         "www": "node scripts/build-www.js",
         "serve": "node scripts/serve.js",
         "cap:add": "npx cap add android",
         "cap:sync": "npm run www && npx cap sync android",
-        "apk": "npm run cap:sync && node scripts/patch-android.js && cd android && gradlew.bat assembleDebug"
+        "apk": "npm run cap:sync && node scripts/patch-android.js && cd android && gradlew.bat assembleRelease"
     },
     "dependencies": {
         "@capacitor/android": "^8.5.2",

@@ -7,6 +7,10 @@ www/
 # Android 原生工程由 `npx cap add android` 生成，不入库
 android/
 
+# 签名密钥（本地生成，只通过 GitHub Secrets 给 CI 用，绝不入库）
+*.jks
+*.keystore
+
 # 其它
 .DS_Store
 Thumbs.db
