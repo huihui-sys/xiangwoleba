@@ -13,6 +13,10 @@ on:
       - 'scripts/**'
       - '.github/workflows/android.yml'
 
+# 打完包顺手发 Release：应用内的「检查更新」就是查这个 Release
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -42,7 +46,9 @@ jobs:
       - name: 自检（语法 + 纯逻辑测试）
         run: npm test
 
-      - name: 组装 www/
+      - name: 组装 www/（顺便把构建号写进页面）
+        env:
+          XWLB_VERSION_CODE: ${{ github.run_number }}
         run: node scripts/build-www.js
 
       - name: 生成 Android 工程
@@ -102,6 +108,35 @@ jobs:
             echo ""
             echo "证书 SHA-256 每次都应该是同一个值（签名固定，可直接覆盖安装）。"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 发布 Release（应用内检查更新靠这个固定地址）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          VER="$(node -p "require('./package.json').version")"
+          TAG="v$VER"
+          {
+            echo "想我了吧 $TAG · 构建 ${{ github.run_number }}"
+            echo ""
+            echo "更新方式：下载下面的 app-release.apk **直接覆盖安装**，数据不会丢（不用卸载）。"
+            echo ""
+            echo "- versionCode：${{ github.run_number }}"
+            echo "- version：$VER"
+            echo "- APK 体积：$(du -h "$APK" | cut -f1)"
+            echo ""
+            echo "固定下载地址：https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk"
+            echo ""
+            echo "BUILD=${{ github.run_number }}"
+          } > "$RUNNER_TEMP/notes.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "想我了吧 $TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "$TAG" --title "想我了吧 $TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          fi
+          gh release upload "$TAG" "$APK#app-release.apk" --clobber
+          echo "✔ 已发布 $TAG；应用内「检查更新」会读到 BUILD=${{ github.run_number }}"
 
       - name: 上传 APK
         uses: actions/upload-artifact@v7

@@ -26,7 +26,7 @@
             }
             document.documentElement.setAttribute('data-theme', t);
             var m = document.querySelector('meta[name="theme-color"]');
-            if (m) { m.setAttribute('content', t === 'light' ? '#f4f5fa' : '#0f1117'); }
+            if (m) { m.setAttribute('content', t === 'light' ? '#fbf3e6' : '#0f1117'); }
         })();
     </script>
     <style>
@@ -61,30 +61,30 @@
             --code-ok: #6ee7a8;
             --code-bad: #ff8f9c;
         }
-        /* 白昼主题：只换颜色，布局完全一致 */
+        /* 白昼主题：暖黄纸感，只换颜色，布局完全一致 */
         html[data-theme="light"] {
-            --bg: #f4f5fa;
-            --card: #ffffff;
-            --card2: #f4f5fa;
-            --line: #e4e6f0;
-            --fg: #1b1f2b;
-            --fg2: #5d6478;
-            --fg3: #8b92a6;
+            --bg: #fbf3e6;
+            --card: #fffaf0;
+            --card2: #f7efe1;
+            --line: #ece0cc;
+            --fg: #3f3428;
+            --fg2: #7d6c58;
+            --fg3: #a2917c;
             --ok: #1c9d6b;
             --warn: #a9750e;
-            --bg-glow: #ffe6ee;
-            --hero-glow: #fff0f5;
-            --top-bg: rgba(255, 255, 255, .86);
-            --tab-bg: rgba(255, 255, 255, .94);
-            --input-bg: #f7f8fc;
-            --switch-off: #ccd1e0;
-            --bar-none: #e6e8f0;
-            --mask-bg: rgba(24, 26, 36, .42);
-            --toast-bg: rgba(40, 46, 62, .95);
-            --toast-fg: #ffffff;
+            --bg-glow: #ffe8c2;
+            --hero-glow: #fff3dc;
+            --top-bg: rgba(255, 250, 240, .88);
+            --tab-bg: rgba(255, 250, 240, .95);
+            --input-bg: #fffdf6;
+            --switch-off: #e0d3bf;
+            --bar-none: #eadfcb;
+            --mask-bg: rgba(58, 44, 26, .42);
+            --toast-bg: rgba(63, 52, 40, .95);
+            --toast-fg: #fffaf0;
             --primary-fg: #ffffff;
-            --danger-fg: #d1374f;
-            --code-bg: #f2f3f8;
+            --danger-fg: #c0392b;
+            --code-bg: #f7efe1;
             --code-ok: #1c8f5f;
             --code-bad: #c1264a;
         }
@@ -369,8 +369,7 @@
                 </div>
                 <div class="row" style="margin-top:10px">
                     <button class="ghost small grow" id="btnCopy">复制这句</button>
-                    <button class="ghost small grow" id="btnShare">分享</button>
-                    <button class="ghost small grow" id="btnAddMine">存为我的</button>
+                    <button class="ghost small grow" id="btnAddMine">存进我的句子</button>
                 </div>
             </div>
 
@@ -432,6 +431,10 @@
                 <button class="small grow" id="btnExport">导出备份</button>
                 <button class="small grow" id="btnImport">导入备份</button>
                 <button class="small grow danger" id="btnClearBuiltin">清空内置</button>
+            </div>
+            <div class="row" style="gap:8px;margin-bottom:10px">
+                <button class="small grow" id="btnExportText">复制备份内容</button>
+                <button class="small grow" id="btnImportText">粘贴恢复</button>
             </div>
             <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
 
@@ -517,13 +520,24 @@
                 <div class="kv"><span>打卡天数</span><span id="statDays">0</span></div>
                 <div class="kv"><span>已收到的句子</span><span id="statLog">0</span></div>
                 <div class="kv"><span>下次提醒</span><span id="statNext">—</span></div>
+                <div class="kv"><span>已排期</span><span id="statPlan">—</span></div>
+                <div class="kv"><span>上次导出</span><span id="statExport">—</span></div>
             </div>
             <div class="row" style="gap:8px;margin-bottom:12px">
                 <button class="small grow" id="btnExport2">导出备份</button>
                 <button class="small grow danger" id="btnReset">清空全部数据</button>
             </div>
             <button class="block small" id="btnGuide">安装与保活指引（安卓必看）</button>
-            <div class="tiny" style="text-align:center;margin:14px 0 6px">数据只存在这台设备上 · v1.0</div>
+            <div class="tiny" style="text-align:center;margin:14px 0 6px">数据只存在这台设备上 · <span id="appVersion">v1.2.0</span></div>
+
+            <div class="sec-title">关于 / 更新</div>
+            <div class="card">
+                <div class="kv"><span>版本</span><span id="aboutVer">—</span></div>
+                <div class="kv"><span>构建号</span><span id="aboutBuild">—</span></div>
+                <div class="kv"><span>更新检查</span><span id="updateState">还没查过</span></div>
+                <button class="block small" id="btnCheckUpdate" style="margin-top:12px">检查更新</button>
+                <div class="dev-note">更新方式：下载新 APK 后<b>直接覆盖安装</b>，数据不会丢，不用卸载。</div>
+            </div>
         </section>
     </main>
 
@@ -799,6 +813,54 @@
             }
             return out;
         }
+        /* 把查询词解析成日期范围（用于「全部记录」里按日期找）：
+           '2026-09-19' → 单日；'2026-09' → 整月；'2026' → 整年；'09-19' → 每年的 9 月 19 日 */
+        function parseRange(q) {
+            var kw = String(q == null ? '' : q).trim();
+            var m = kw.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/);
+            if (m) { var k = m[1] + '-' + pad2(+m[2]) + '-' + pad2(+m[3]); return { from: k, to: k, md: false }; }
+            m = kw.match(/^(\d{4})[-\/.](\d{1,2})$/);
+            if (m) { return { from: m[1] + '-' + pad2(+m[2]) + '-00', to: m[1] + '-' + pad2(+m[2]) + '-99', md: false }; }
+            m = kw.match(/^(\d{4})$/);
+            if (m) { return { from: m[1] + '-00-00', to: m[1] + '-99-99', md: false }; }
+            m = kw.match(/^(\d{1,2})[-\/.](\d{1,2})$/);
+            if (m) { var md = pad2(+m[1]) + '-' + pad2(+m[2]); return { from: md, to: md, md: true }; }
+            return null;
+        }
+        /* 打卡记录查找：空查询 = 全部；日期形式按日期筛；其它词在日期 / 备注 / 标签 / 心情里找 */
+        function filterRecords(records, q) {
+            var recs = records || {};
+            var all = Object.keys(recs).sort().reverse();
+            var kw = String(q == null ? '' : q).trim();
+            if (!kw) { return all; }
+            var r = parseRange(kw);
+            if (r) {
+                return all.filter(function (k) {
+                    var key = r.md ? k.slice(5) : k;
+                    return key >= r.from && key <= r.to;
+                });
+            }
+            var lo = kw.toLowerCase();
+            return all.filter(function (k) {
+                var rec = recs[k] || {};
+                var f = MOOD_FACES[(rec.mood || 0) - 1];
+                var hay = k + ' ' + (rec.note || '') + ' ' + ((rec.tags || []).join(' ')) + ' ' + (f ? f.l : '');
+                return hay.toLowerCase().indexOf(lo) >= 0;
+            });
+        }
+        /* 版本 / 构建号比较：a 比 b 新返回 1，相同返回 0，更旧返回 -1（按数字段比，'12' 比 '9' 新） */
+        function cmpVersion(a, b) {
+            var pa = String(a == null ? '' : a).replace(/[^\d.]/g, '').split('.');
+            var pb = String(b == null ? '' : b).replace(/[^\d.]/g, '').split('.');
+            var n = Math.max(pa.length, pb.length);
+            for (var i = 0; i < n; i++) {
+                var x = parseInt(pa[i], 10), y = parseInt(pb[i], 10);
+                if (isNaN(x)) { x = 0; }
+                if (isNaN(y)) { y = 0; }
+                if (x !== y) { return x > y ? 1 : -1; }
+            }
+            return 0;
+        }
         /* 自检：浏览器 ?selftest=1 与 Node 脚本 scripts/selftest.js 共用 */
         function runSelfTest(makeState) {
             var R = [];
@@ -930,6 +992,39 @@
             noWin.settings.windows = [];
             ok('没有时间段时计划为空', buildPlan(noWin, Date.now(), 3).length === 0);
 
+            /* 11. 打卡记录查找：整月 / 单日 / 跨年 / 关键词 */
+            var recs = {
+                '2025-09-19': { mood: 2, tags: ['累'], note: '加班到很晚' },
+                '2026-08-31': { mood: 5, tags: ['被夸'], note: '' },
+                '2026-09-01': { mood: 3, tags: [], note: '普通的一天' },
+                '2026-09-19': { mood: 4, tags: ['顺利'], note: '事情都做完了' },
+                '2027-09-19': { mood: 1, tags: ['emo'], note: '' }
+            };
+            ok('空查询返回全部记录（按日期倒序）',
+                filterRecords(recs, '').join(',') === '2027-09-19,2026-09-19,2026-09-01,2026-08-31,2025-09-19',
+                filterRecords(recs, '').join(','));
+            ok('2026-09 只匹配 2026 年 9 月',
+                filterRecords(recs, '2026-09').join(',') === '2026-09-19,2026-09-01',
+                filterRecords(recs, '2026-09').join(','));
+            ok('2026-09-19 只匹配单日', filterRecords(recs, '2026-09-19').join(',') === '2026-09-19',
+                filterRecords(recs, '2026-09-19').join(','));
+            ok('09-19 跨年匹配每年的 9 月 19 日',
+                filterRecords(recs, '09-19').join(',') === '2027-09-19,2026-09-19,2025-09-19',
+                filterRecords(recs, '09-19').join(','));
+            ok('2026 匹配整年', filterRecords(recs, '2026').join(',') === '2026-09-19,2026-09-01,2026-08-31',
+                filterRecords(recs, '2026').join(','));
+            ok('关键词匹配备注', filterRecords(recs, '加班').join(',') === '2025-09-19', filterRecords(recs, '加班').join(','));
+            ok('关键词匹配标签', filterRecords(recs, '被夸').join(',') === '2026-08-31', filterRecords(recs, '被夸').join(','));
+            ok('关键词匹配心情名', filterRecords(recs, '很好').join(',') === '2026-08-31', filterRecords(recs, '很好').join(','));
+            ok('找不到时返回空数组', filterRecords(recs, '没有的词').length === 0);
+            ok('记录为空时不崩', filterRecords({}, '').length === 0 && filterRecords(null, 'x').length === 0);
+
+            /* 12. 版本 / 构建号比较 */
+            ok('cmpVersion：构建号 12 比 9 新', cmpVersion('12', '9') === 1, cmpVersion('12', '9'));
+            ok('cmpVersion：相同视为一样', cmpVersion('1.2.0', '1.2.0') === 0 && cmpVersion('v1.2.0', '1.2.0') === 0);
+            ok('cmpVersion：1.10.0 比 1.2.0 新（按数字段比）', cmpVersion('1.10.0', '1.2.0') === 1, cmpVersion('1.10.0', '1.2.0'));
+            ok('cmpVersion：1.2.0 比 1.2.1 旧', cmpVersion('1.2.0', '1.2.1') === -1);
+
             var pass = R.filter(function (x) { return x.ok; }).length;
             return { list: R, pass: pass, total: R.length, allPass: pass === R.length };
         }
@@ -942,6 +1037,17 @@
         var CAP = window.Capacitor || null;
         var NATIVE = !!(CAP && CAP.isNativePlatform && CAP.isNativePlatform());
         var LocalNotif = (CAP && CAP.Plugins && CAP.Plugins.LocalNotifications) || null;
+        var FS = (CAP && CAP.Plugins && CAP.Plugins.Filesystem) || null;   /* 备份写文件用 */
+        var Share = (CAP && CAP.Plugins && CAP.Plugins.Share) || null;     /* 备份交给系统分享面板 */
+        var APP_VERSION = '1.2.0';      /* 与 package.json 的 version 一致（scripts/check.js 会核对） */
+        var APP_BUILD = 'dev';          /* 打包时由 scripts/build-www.js 用 CI 的构建号替换 */
+        var LS_LAST_EXPORT = 'xwlb.lastExport';   /* 上次导出的文件名 + 时间 */
+        var LS_UPDATE = 'xwlb.updateCheck';       /* 上次检查更新的结果（24 小时内不重复请求） */
+        var UPD_API = 'https://api.github.com/repos/huihui-sys/xiangwoleba/releases/latest';
+        var UPD_PAGE = 'https://github.com/huihui-sys/xiangwoleba/releases/latest';
+        var UPD_APK = UPD_PAGE + '/download/app-release.apk';
+        var UPDATE = null;              /* 查到的新版本信息；为空表示没有新版 */
+        var histQ = '';                 /* 「全部记录」里的查找词 */
         var CHANNEL_ID = 'xwlb';        /* 自建高优先级通道：插件自带的 default 改不了重要性，弹不出横幅 */
         var ASKED_KEY = 'xwlb.notifyAsked';  /* 记一下「有没有问过通知权限」，免得每次打开都弹框 */
         var NOTIFY_OK = false;          /* 是否已经拿到系统通知权限 */
@@ -1237,7 +1343,7 @@
                 if (!silent) { toast('已暂停，不会再主动找你'); }
                 return;
             }
-            state.plan = buildPlan(state, now, NATIVE ? 4 : 2);
+            state.plan = buildPlan(state, now, NATIVE ? 10 : 2);   /* App 里一次排 10 天：少重排＝少打扰 */
             save();
             pushNative();
             if (!silent) { toast('已重新排好：' + state.plan.length + ' 条待发'); }
@@ -1267,8 +1373,17 @@
                 var p = state.plan[i];
                 if (!p.fired && p.at <= now) { fireItem(p); hit = true; }
             }
-            if (!state.settings.paused && state.planBuiltAt && now - state.planBuiltAt > 11 * 3600 * 1000) {
-                rebuildPlan(true);
+            /* 只在「快发完」时才补排：剩不到半天量、或计划只剩最后一天。
+               这样平时不会动不动重排，也就不会频繁刷新系统闹钟。 */
+            if (!state.settings.paused && state.planBuiltAt) {
+                var left = 0, lastAt = 0;
+                for (var j = 0; j < state.plan.length; j++) {
+                    if (!state.plan[j].fired) { left++; lastAt = state.plan[j].at; }
+                }
+                var floorN = Math.max(1, Math.ceil(state.settings.dailyMax / 2));
+                if (left <= floorN || (lastAt && lastAt - now < 36 * 3600 * 1000)) {
+                    rebuildPlan(true);
+                }
             }
             renderHints();
             if (hit) { renderStats(); }
@@ -1369,6 +1484,16 @@
                 }
             }
             $('statNext').textContent = hint;
+            var sp = $('statPlan');
+            if (sp) {
+                var leftList = state.plan.filter(function (x) { return !x.fired; });
+                if (state.settings.paused) { sp.textContent = '已暂停'; }
+                else if (!leftList.length) { sp.textContent = '还没排'; }
+                else {
+                    var ld = new Date(leftList[leftList.length - 1].at);
+                    sp.textContent = '排到 ' + (ld.getMonth() + 1) + ' 月 ' + ld.getDate() + ' 日 · 还剩 ' + leftList.length + ' 条';
+                }
+            }
         }
         function renderStats() {
             $('statSent').textContent = state.sentences.length + ' 条';
@@ -1472,20 +1597,68 @@
             }
             renderTopbar();
         }
-        /* 全部打卡记录 */
+        /* 全部打卡记录：可按日期找（2026-09 整月 / 2026-09-19 单日 / 09-19 每年的这天 / 2026 整年），
+           也可以按关键词在备注、标签、心情名里找 */
+        function monthKey(offset) {
+            var d = new Date();
+            d.setDate(1);
+            d.setMonth(d.getMonth() + (offset || 0));
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+        }
         function showMoodHistory() {
-            var keys = Object.keys(state.records).sort().reverse();
-            if (!keys.length) { toast('还没有打卡记录'); return; }
-            var html = '<h3>全部打卡记录</h3><div class="dev-note">共 ' + keys.length + ' 天</div><div style="margin-top:10px">';
-            keys.slice(0, 120).forEach(function (k) {
-                var r = state.records[k];
-                var f = MOOD_FACES[(r.mood || 3) - 1];
-                html += '<div class="kv"><span>' + k + '</span><span>' + f.e + ' ' + f.l +
-                    (r.tags && r.tags.length ? ' · ' + esc(r.tags.join('/')) : '') + '</span></div>';
-                if (r.note) { html += '<div class="tiny" style="margin:-4px 0 8px">' + esc(r.note) + '</div>'; }
-            });
-            html += '</div><button class="block small" style="margin-top:12px" onclick="closeSheet()">关闭</button>';
-            openSheet(html);
+            var total = Object.keys(state.records).length;
+            if (!total) { toast('还没有打卡记录'); return; }
+            var now = new Date();
+            openSheet('<h3>全部打卡记录</h3>' +
+                '<input type="text" id="histQ" placeholder="找某天：2026-09 / 2026-09-19 / 09-19，或输个词" style="margin-top:10px">' +
+                '<div class="catfilter" id="histQuick" style="margin-top:10px"></div>' +
+                '<div class="tiny" id="histStat" style="margin:2px 0 8px"></div>' +
+                '<div id="histList"></div>' +
+                '<button class="block small" style="margin-top:12px" onclick="closeSheet()">关闭</button>');
+            var quick = [
+                { k: '本月', v: now.getFullYear() + '-' + pad2(now.getMonth() + 1) },
+                { k: '上月', v: monthKey(-1) },
+                { k: '今年', v: String(now.getFullYear()) },
+                { k: '全部', v: '' }
+            ];
+            $('histQuick').innerHTML = quick.map(function (x) {
+                return '<button data-hist="' + esc(x.v) + '">' + x.k + '</button>';
+            }).join('');
+            var input = $('histQ');
+            input.value = histQ;
+            function renderHist() {
+                var keys = filterRecords(state.records, histQ);
+                $('histStat').textContent = histQ
+                    ? ('找到 ' + keys.length + ' 天（一共记了 ' + total + ' 天）')
+                    : ('一共记了 ' + total + ' 天，按日期或关键词都能找');
+                var btns = $('histQuick').getElementsByTagName('button');
+                for (var b = 0; b < btns.length; b++) {
+                    btns[b].classList.toggle('on', btns[b].getAttribute('data-hist') === histQ);
+                }
+                if (!keys.length) {
+                    $('histList').innerHTML = '<div class="muted">没有匹配的记录，换个日期或词试试</div>';
+                    return;
+                }
+                var html = '';
+                keys.slice(0, 300).forEach(function (k) {
+                    var r = state.records[k] || {};
+                    var f = MOOD_FACES[(r.mood || 3) - 1];
+                    html += '<div class="kv"><span>' + esc(k) + '</span><span>' + f.e + ' ' + f.l +
+                        (r.tags && r.tags.length ? ' · ' + esc(r.tags.join('/')) : '') + '</span></div>';
+                    if (r.note) { html += '<div class="tiny" style="margin:-4px 0 8px">' + esc(r.note) + '</div>'; }
+                });
+                if (keys.length > 300) { html += '<div class="tiny" style="margin-top:8px">只显示前 300 条，输个更具体的日期试试</div>'; }
+                $('histList').innerHTML = html;
+            }
+            input.oninput = function () { histQ = this.value; renderHist(); };
+            $('histQuick').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                histQ = b.getAttribute('data-hist') || '';
+                input.value = histQ;
+                renderHist();
+            };
+            renderHist();
         }
         /* ---------- 句子管理 ---------- */
         var sentFilter = 'all';
@@ -1633,42 +1806,137 @@
             };
         }
         /* ---------- 备份 ---------- */
+        function backupJson() {
+            return JSON.stringify({ app: '想我了吧', version: 1, exportedAt: new Date().toISOString(), state: state }, null, 2);
+        }
+        function backupFileName() { return '想我了吧-' + dateKey(Date.now()) + '.json'; }
+        /* 记一下「上次导出」：设置页显示，好确认备份到底出去没有 */
+        function markExported(name) {
+            try { localStorage.setItem(LS_LAST_EXPORT, JSON.stringify({ name: name, at: Date.now() })); } catch (e) { }
+            renderExportInfo();
+        }
+        function renderExportInfo() {
+            var el = $('statExport');
+            if (!el) { return; }
+            var raw = null;
+            try { raw = JSON.parse(localStorage.getItem(LS_LAST_EXPORT) || 'null'); } catch (e) { raw = null; }
+            if (!raw || !raw.at) { el.textContent = '还没导出过'; return; }
+            var d = new Date(raw.at);
+            var day = (dateKey(raw.at) === dateKey(Date.now())) ? '今天' : dateKey(raw.at).slice(5);
+            el.textContent = raw.name + ' · ' + day + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+        }
+        function copyText(txt, okMsg) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(function () { toast(okMsg || '已复制'); },
+                    function () { toast('复制失败：长按文字手动全选复制'); });
+                return;
+            }
+            var ta = document.createElement('textarea');
+            ta.value = txt;
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); toast(okMsg || '已复制'); } catch (e) { toast('复制失败'); }
+            ta.remove();
+        }
+        /* 兜底：把 JSON 摊成可以复制的文本（WebView 里没下载器 / 分享失败时用） */
+        function showBackupText(title, data) {
+            openSheet('<h3>' + esc(title) + '</h3>' +
+                '<div class="dev-note">把下面整段复制走（发给自己 / 存备忘录都行），换手机时用「粘贴恢复」导回来。</div>' +
+                '<textarea id="backupText" readonly style="margin-top:10px;min-height:180px;font-size:12px"></textarea>' +
+                '<button class="primary block" id="backupCopy" style="margin-top:12px">复制全部</button>' +
+                '<button class="block small ghost" style="margin-top:8px" onclick="closeSheet()">关闭</button>');
+            $('backupText').value = data;
+            $('backupCopy').onclick = function () { copyText(data, '备份内容已复制'); };
+        }
         function exportBackup() {
-            var data = JSON.stringify({ app: '想我了吧', version: 1, exportedAt: new Date().toISOString(), state: state }, null, 2);
-            var blob = new Blob([data], { type: 'application/json' });
-            var a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = '想我了吧-' + dateKey(Date.now()) + '.json';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-            toast('已导出备份文件');
+            var data = backupJson();
+            var name = backupFileName();
+            if (!NATIVE) {
+                /* 网页版：浏览器自己会下载 */
+                var blob = new Blob([data], { type: 'application/json' });
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+                markExported(name);
+                toast('已导出备份文件');
+                return;
+            }
+            /* App 里旧写法（blob: + a.click()）只会假装成功：WebView 没有下载器，文件不落盘。
+               现在先写进应用缓存目录，再交给系统「分享」面板，让你存到「文件」或发给自己。 */
+            if (!FS || !Share) {
+                markExported(name + '（文本）');
+                showBackupText('导出备份（文本方式）', data);
+                return;
+            }
+            FS.writeFile({ path: name, data: data, directory: 'CACHE', encoding: 'utf8' }).then(function (res) {
+                markExported(name);
+                return Share.share({
+                    title: name,
+                    text: '想我了吧 · 备份 ' + dateKey(Date.now()),
+                    files: [res.uri],
+                    dialogTitle: '保存或发送备份文件'
+                });
+            }).then(function () {
+                toast('备份已生成：在分享面板里存到「文件」或发给自己', 3200);
+            }).catch(function (e) {
+                var msg = String((e && e.message) || e);
+                if (/cancel/i.test(msg)) { return; }   /* 你自己点了取消，不算失败 */
+                toast('导出失败，改用文本备份：' + msg, 2600);
+                markExported(name + '（文本）');
+                showBackupText('导出备份（文本方式）', data);
+            });
+        }
+        /* 文本方式导出：不走文件系统，直接把内容摊出来复制 */
+        function exportBackupText() {
+            markExported(backupFileName() + '（文本）');
+            showBackupText('导出备份（文本方式）', backupJson());
+        }
+        function applyBackup(text) {
+            var obj = JSON.parse(String(text));
+            var s = obj && obj.state ? obj.state : obj;
+            if (!s || !s.sentences) { throw new Error('内容里没有句子数据'); }
+            var d = defaultState();
+            s.settings = s.settings || d.settings;
+            for (var k in d.settings) { if (!(k in s.settings)) { s.settings[k] = d.settings[k]; } }
+            s.records = s.records || {};
+            s.cooldown = s.cooldown || {};
+            s.log = Array.isArray(s.log) ? s.log : [];
+            s.plan = [];
+            s.planBuiltAt = 0;
+            state = s;
+            save();
+            rebuildPlan(true);
+            boot(true);
+            toast('导入成功：' + state.sentences.length + ' 条句子');
         }
         function importBackup(file) {
             var fr = new FileReader();
             fr.onload = function () {
-                try {
-                    var obj = JSON.parse(String(fr.result));
-                    var s = obj && obj.state ? obj.state : obj;
-                    if (!s || !s.sentences) { throw new Error('文件里没有句子数据'); }
-                    var d = defaultState();
-                    s.settings = s.settings || d.settings;
-                    for (var k in d.settings) { if (!(k in s.settings)) { s.settings[k] = d.settings[k]; } }
-                    s.records = s.records || {};
-                    s.cooldown = s.cooldown || {};
-                    s.log = Array.isArray(s.log) ? s.log : [];
-                    s.plan = [];
-                    s.planBuiltAt = 0;
-                    state = s;
-                    save();
-                    rebuildPlan(true);
-                    boot(true);
-                    toast('导入成功：' + state.sentences.length + ' 条句子');
-                } catch (e) {
-                    toast('导入失败：' + (e && e.message ? e.message : e), 3000);
-                }
+                try { applyBackup(fr.result); }
+                catch (e) { toast('导入失败：' + (e && e.message ? e.message : e), 3000); }
             };
             fr.readAsText(file);
+        }
+        /* 粘贴恢复：手机上没有文件管理器也能把备份导回来 */
+        function showImportText() {
+            openSheet('<h3>粘贴恢复</h3>' +
+                '<div class="dev-note">把「复制备份内容」存下来的那段 JSON 粘进下面，点恢复。当前数据会被覆盖。</div>' +
+                '<textarea id="restoreText" style="margin-top:10px;min-height:160px;font-size:12px" placeholder=\'{"app":"想我了吧", ... }\'></textarea>' +
+                '<button class="primary block" id="restoreGo" style="margin-top:12px">恢复</button>' +
+                '<button class="block small ghost" style="margin-top:8px" onclick="closeSheet()">取消</button>');
+            $('restoreGo').onclick = function () {
+                var txt = ($('restoreText').value || '').trim();
+                if (!txt) { toast('先粘贴备份内容'); return; }
+                try {
+                    applyBackup(txt);
+                    closeSheet();
+                } catch (e) {
+                    toast('恢复失败：' + (e && e.message ? e.message : e), 3000);
+                }
+            };
         }
         /* ---------- 设置 ---------- */
         function renderWindows() {
@@ -1699,6 +1967,8 @@
             renderWindows();
             renderStats();
             renderHints();
+            renderExportInfo();
+            renderAbout();
             var msg;
             if (NATIVE) {
                 msg = (NOTIFY_OK ? 'App 模式：系统通知已允许，' : 'App 模式：⚠️ 还没拿到通知权限（去系统设置里允许），') +
@@ -1761,25 +2031,107 @@
         }
         function copyCard() {
             if (!card.text) { return; }
-            var txt = card.text;
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(txt).then(function () { toast('已复制'); }, function () { toast('复制失败，长按文字手动复制吧'); });
-            } else {
-                var ta = document.createElement('textarea');
-                ta.value = txt;
-                document.body.appendChild(ta);
-                ta.select();
-                try { document.execCommand('copy'); toast('已复制'); } catch (e) { toast('复制失败'); }
-                ta.remove();
+            copyText(card.text, '已复制');
+        }
+        /* ---------- 关于 / 检查更新 ---------- */
+        function readUpdateCache() {
+            try { return JSON.parse(localStorage.getItem(LS_UPDATE) || 'null'); } catch (e) { return null; }
+        }
+        function writeUpdateCache(o) {
+            try { localStorage.setItem(LS_UPDATE, JSON.stringify(o)); } catch (e) { }
+        }
+        function timeAgo(ts) {
+            var m = Math.round((Date.now() - ts) / 60000);
+            if (m < 1) { return '刚刚'; }
+            if (m < 60) { return m + ' 分钟前'; }
+            if (m < 1440) { return Math.round(m / 60) + ' 小时前'; }
+            return Math.round(m / 1440) + ' 天前';
+        }
+        function openExternal(url) {
+            try {
+                var w = window.open(url, '_system');
+                if (w) { return; }
+            } catch (e) { }
+            try {
+                var a = document.createElement('a');
+                a.href = url;
+                a.target = '_system';
+                a.rel = 'noopener';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function () { a.remove(); }, 1200);
+            } catch (e2) {
+                toast('打不开浏览器，请复制下载地址手动下载');
             }
         }
-        function shareCard() {
-            if (!card.text) { return; }
-            if (navigator.share) {
-                navigator.share({ text: card.text }).catch(function () { });
-            } else {
-                copyCard();
+        function renderAbout() {
+            var isDev = (APP_BUILD === 'dev');
+            var verText = 'v' + APP_VERSION + '（' + (isDev ? '网页版 / 开发版' : '构建 ' + APP_BUILD) + '）';
+            if ($('appVersion')) { $('appVersion').textContent = verText; }
+            if ($('aboutVer')) { $('aboutVer').textContent = verText; }
+            if ($('aboutBuild')) { $('aboutBuild').textContent = isDev ? '还没打包（dev）' : APP_BUILD; }
+            var el = $('updateState');
+            if (el) {
+                var cache = readUpdateCache();
+                if (UPDATE) { el.textContent = '有新版本 v' + UPDATE.version + '（构建 ' + UPDATE.build + '）'; }
+                else if (isDev) { el.textContent = '网页版不检查更新'; }
+                else if (cache && cache.at) { el.textContent = '已是最新（' + timeAgo(cache.at) + '查过）'; }
+                else { el.textContent = '还没查过'; }
             }
+            var btn = $('btnCheckUpdate');
+            if (btn) { btn.disabled = false; btn.textContent = UPDATE ? '去下载新版本' : '检查更新'; }
+        }
+        /* 检查更新：比对 GitHub Release 里的构建号（比版本号准，因为每次打包都会 +1） */
+        function checkUpdate(manual) {
+            if (!NATIVE) {
+                if (manual) { toast('网页版不用更新，刷新页面就是最新的'); }
+                return;
+            }
+            if (APP_BUILD === 'dev') {
+                if (manual) { toast('这个包没带构建号，装正式版才能检查更新'); }
+                return;
+            }
+            var btn = $('btnCheckUpdate');
+            if (btn) { btn.disabled = true; btn.textContent = '检查中…'; }
+            if ($('updateState')) { $('updateState').textContent = '检查中…'; }
+            fetch(UPD_API, { headers: { 'Accept': 'application/vnd.github+json' } }).then(function (r) {
+                if (!r.ok) { throw new Error('HTTP ' + r.status); }
+                return r.json();
+            }).then(function (j) {
+                var tag = String((j && j.tag_name) || '');
+                var body = String((j && j.body) || '');
+                var mB = body.match(/BUILD\s*[:=]\s*(\d+)/i);
+                var build = mB ? mB[1] : tag.replace(/[^\d.]/g, '');
+                var ver = tag.replace(/^v/i, '') || APP_VERSION;
+                writeUpdateCache({ at: Date.now(), build: build });
+                if (build && cmpVersion(build, APP_BUILD) > 0) {
+                    UPDATE = { build: build, version: ver, url: UPD_APK };
+                    renderAbout();
+                    if (manual) { toast('有新版本 v' + ver + '（构建 ' + build + '）', 2600); }
+                    else { showBanner(state.settings.appName, '有新版本啦：v' + ver + '（构建 ' + build + '），去设置页点「去下载新版本」'); }
+                } else {
+                    UPDATE = null;
+                    renderAbout();
+                    if (manual) { toast('已经是最新的（构建 ' + APP_BUILD + '）'); }
+                }
+            }).catch(function (e) {
+                if (btn) { btn.disabled = false; btn.textContent = UPDATE ? '去下载新版本' : '检查更新'; }
+                if ($('updateState')) { $('updateState').textContent = '检查失败，稍后再试'; }
+                if (manual) { toast('检查失败：' + ((e && e.message) || e), 2600); }
+            });
+        }
+        function showUpdateSheet() {
+            if (!UPDATE) { checkUpdate(true); return; }
+            openSheet('<h3>有新版本 v' + esc(UPDATE.version) + '（构建 ' + esc(UPDATE.build) + '）</h3>' +
+                '<div class="guide" style="margin-top:10px">' +
+                '<p>你现在用的是构建 ' + esc(APP_BUILD) + '。</p>' +
+                '<p>点「打开下载页」会在浏览器里下载新的 APK；装的时候<b>直接覆盖安装</b>，<b>不要卸载</b> —— 卸载会清掉打卡记录和收藏。</p>' +
+                '</div>' +
+                '<button class="primary block" id="updGo" style="margin-top:12px">打开下载页</button>' +
+                '<button class="block small" id="updCopy" style="margin-top:8px">复制下载地址</button>' +
+                '<button class="block small ghost" style="margin-top:8px" onclick="closeSheet()">关闭</button>');
+            $('updGo').onclick = function () { openExternal(UPD_APK); };
+            $('updCopy').onclick = function () { copyText(UPD_APK, '下载地址已复制'); };
         }
         function toggleFav() {
             var s = card.sid ? findSentence(card.sid) : null;
@@ -1806,7 +2158,6 @@
             $('btnNext').onclick = function () { rollSentence(catPref); };
             $('btnFav').onclick = toggleFav;
             $('btnCopy').onclick = copyCard;
-            $('btnShare').onclick = shareCard;
             $('btnAddMine').onclick = saveCardAsMine;
             $('catFilter').onclick = function (e) {
                 var b = e.target.closest('button');
@@ -1840,6 +2191,8 @@
             $('btnNewOne').onclick = function () { editSentence(''); };
             $('btnExport').onclick = exportBackup;
             $('btnExport2').onclick = exportBackup;
+            $('btnExportText').onclick = exportBackupText;
+            $('btnImportText').onclick = showImportText;
             $('btnImport').onclick = function () { $('fileInput').click(); };
             $('fileInput').onchange = function () {
                 if (this.files && this.files[0]) { importBackup(this.files[0]); }
@@ -1996,6 +2349,7 @@
                 });
             };
             $('btnGuide').onclick = showGuide;
+            $('btnCheckUpdate').onclick = function () { if (UPDATE) { showUpdateSheet(); } else { checkUpdate(true); } };
             $('btnReset').onclick = resetAll;
             /* 弹层：点空白关掉 */
             $('sheetMask').onclick = function (e) {
@@ -2053,6 +2407,13 @@
             initNotifyPermission();
             /* App 里每次启动都重新把计划写进系统闹钟（重启 / 被清后台后也不会丢） */
             if (NATIVE) { pushNative(); }
+            /* 应用内检查更新：最多 24 小时查一次；网络不通就悄悄算了，不打扰 */
+            if (NATIVE && APP_BUILD !== 'dev') {
+                var uc = readUpdateCache();
+                if (!uc || !uc.at || Date.now() - uc.at > 24 * 3600 * 1000) {
+                    setTimeout(function () { checkUpdate(false); }, 4000);
+                }
+            }
             /* 从后台切回前台：补一次检查并把系统闹钟刷新一遍 */
             if (NATIVE && CAP && CAP.Plugins && CAP.Plugins.App && CAP.Plugins.App.addListener) {
                 try {

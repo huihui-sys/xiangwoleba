@@ -50,5 +50,26 @@ if (missing.length) {
     console.log('  ✔ JS 引用的 ' + used.size + ' 个 id 在 HTML 里都存在');
 }
 
+/* 版本号必须和 package.json 一致，否则 App 里显示的版本会骗人 */
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+const verMatch = html.match(/var APP_VERSION = '([^']+)'/);
+if (!verMatch) {
+    bad++;
+    console.log("  ✘ 找不到 var APP_VERSION = '...'，App 里没法显示版本号");
+} else if (verMatch[1] !== pkg.version) {
+    bad++;
+    console.log('  ✘ 版本号不一致：mood.html 里是 ' + verMatch[1] + '，package.json 里是 ' + pkg.version);
+} else {
+    console.log('  ✔ APP_VERSION 与 package.json 一致（' + verMatch[1] + '）');
+}
+
+/* 构建号占位必须留着：打包时 scripts/build-www.js 会把它换成 CI 的运行序号 */
+if (/var APP_BUILD = 'dev';/.test(html)) {
+    console.log("  ✔ 找到构建号占位 var APP_BUILD = 'dev';（打包时替换）");
+} else {
+    bad++;
+    console.log("  ✘ 缺少 var APP_BUILD = 'dev'; 占位，打包脚本就没法注入构建号");
+}
+
 console.log(bad ? '\n检查结果：有 ' + bad + ' 个问题 ❌' : '\n检查结果：全部通过 ✅');
 process.exit(bad ? 1 : 0);

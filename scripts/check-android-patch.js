@@ -18,6 +18,9 @@ const root = path.join(__dirname, '..');
 const TMP = path.join(os.tmpdir(), 'xwlb-android-patch-check');
 const FAKE_KS = path.join(TMP, 'fake-keystore.jks');
 const PW = 'test-password';
+/* 版本号不写死：patch-android.js 读的就是根目录 package.json 的 version，
+   这里跟着一起读，免得升个版本就把测试弄红 */
+const VERSION = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 const results = [];
 let pass = 0;
 let fail = 0;
@@ -134,7 +137,7 @@ ok('build.gradle 里出现 2 处注入标记', count(g, /xwlb-signing-config/g) 
 ok('android { 里插入了 signingConfigs', /android \{\s*\n\s*\/\/ xwlb-signing-config[\s\S]*?signingConfigs \{/.test(g));
 ok('release 里挂上了 signingConfig', /buildTypes \{[\s\S]*?release \{[\s\S]*?signingConfig signingConfigs\.release/.test(g));
 ok('签名信息全部走环境变量', count(g, /System\.getenv\('XWLB_KEY/g) === 4, count(g, /System\.getenv\('XWLB_KEY/g));
-ok('versionName 取到 package.json 的版本', /versionName "1\.1\.0"/.test(g));
+ok('versionName 取到 package.json 的版本（' + VERSION + '）', g.indexOf('versionName "' + VERSION + '"') > 0);
 ok('versionCode 用环境变量的 42', /versionCode 42/.test(g));
 ok('没有把明文密码写进 build.gradle', g.indexOf(PW) < 0);
 ok('花括号配平', braces(g) === 0, 'balance=' + braces(g));
@@ -166,7 +169,7 @@ results.push('== 场景 4：CI 模式缺密钥（exit ' + r.code + '）');
 ok('退出码 1（fail fast，不会打出随机签名的包）', r.code === 1, 'exit=' + r.code);
 ok('提示里点名需要的 Secrets', r.text.indexOf('ANDROID_KEYSTORE_BASE64') > 0);
 ok('没有注入签名', read(GR).indexOf('xwlb-signing-config') < 0);
-ok('versionName 仍被更新', /versionName "1\.1\.0"/.test(read(GR)));
+ok('versionName 仍被更新', read(GR).indexOf('versionName "' + VERSION + '"') > 0);
 
 /* ---------- 场景 5：本地调试，不给任何变量 ---------- */
 buildFixture();
@@ -174,7 +177,7 @@ r = runPatch({});
 results.push('== 场景 5：本地调试无环境变量（exit ' + r.code + '）');
 ok('退出码 0（本地仍可构建）', r.code === 0, 'exit=' + r.code);
 ok('不注入签名', read(GR).indexOf('xwlb-signing-config') < 0);
-ok('versionName 已同步', /versionName "1\.1\.0"/.test(read(GR)));
+ok('versionName 已同步', read(GR).indexOf('versionName "' + VERSION + '"') > 0);
 ok('versionCode 保持模板值', /versionCode 1\b/.test(read(GR)));
 ok('花括号配平', braces(read(GR)) === 0, 'balance=' + braces(read(GR)));
 

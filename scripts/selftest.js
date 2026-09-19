@@ -22,7 +22,8 @@ const exported = [
     'CATS', 'BUILTIN', 'MOOD_W', 'COOL_MS', 'RECENT_N', 'LONG_LEN', 'MOOD_FACES', 'MOOD_TAGS',
     'pad2', 'catName', 'catEmoji', 'dateKey', 'hhmmToMin', 'minToHHMM', 'randInt',
     'expandBuiltin', 'moodOf', 'moodBand', 'moodStreak', 'weightedPick', 'pickCat',
-    'recentIds', 'pickSentence', 'inQuiet', 'buildPlan', 'parseBulk', 'parseLines', 'runSelfTest'
+    'recentIds', 'pickSentence', 'inQuiet', 'buildPlan', 'parseBulk', 'parseLines',
+    'parseRange', 'filterRecords', 'cmpVersion', 'runSelfTest'
 ];
 const factory = new Function(
     '"use strict";\n' + m[1] + '\n;return {' + exported.join(',') + '};'
