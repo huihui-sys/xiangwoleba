@@ -261,14 +261,25 @@
         .tags { display: flex; gap: 8px; flex-wrap: wrap; }
         .tags button { padding: 7px 11px; font-size: 13px; border-radius: 999px; }
         .tags button.on { border-color: var(--accent2); color: var(--accent2); background: rgba(255, 178, 107, .1); }
-        .bars { display: flex; gap: 6px; align-items: flex-end; height: 92px; margin: 6px 0 4px; }
-        .bars .b { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
-        .bars .b i {
-            display: block; border-radius: 6px 6px 3px 3px; min-height: 4px;
+        .bars { display: flex; gap: 6px; align-items: stretch; height: 104px; margin: 6px 0 4px; }
+        .bars .b { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
+        /* 柱子外面套一层「轨道」：轨道 = 总高 − 日期标签的高度，
+           这样百分比才真的等于分数占比；柱子又是 flex:0 0 auto 不会被压扁。
+           （原来柱子直接当 .b 的 flex 子项、百分比按 92px 算，超出被 shrink，
+             结果 4 分和 5 分渲染出来几乎一样高。） */
+        .bars .b .track { flex: 1 1 auto; min-height: 0; display: flex; align-items: flex-end; }
+        .bars .b .track i {
+            display: block; width: 100%; flex: 0 0 auto; min-height: 4px;
+            border-radius: 6px 6px 3px 3px;
             background: linear-gradient(180deg, var(--accent), rgba(255, 111, 145, .25));
         }
-        .bars .b.none i { background: var(--bar-none); }
-        .bars .b span { text-align: center; font-size: 11px; color: var(--fg3); margin-top: 6px; }
+        /* 按分数分档上色：低落偏蓝紫、一般偏黄、不错偏橙、很好偏粉，高低一眼看得出 */
+        .bars .b.v1 .track i, .bars .b.v2 .track i { background: linear-gradient(180deg, #7b86d8, rgba(123, 134, 216, .22)); }
+        .bars .b.v3 .track i { background: linear-gradient(180deg, #d8b25e, rgba(216, 178, 94, .22)); }
+        .bars .b.v4 .track i { background: linear-gradient(180deg, #ffb26b, rgba(255, 178, 107, .24)); }
+        .bars .b.v5 .track i { background: linear-gradient(180deg, #ff6f91, rgba(255, 111, 145, .32)); }
+        .bars .b.none .track i { background: var(--bar-none); }
+        .bars .b span { flex: 0 0 auto; text-align: center; font-size: 11px; color: var(--fg3); margin-top: 6px; }
         /* ---- 句子列表 ---- */
         .sent {
             display: flex; gap: 10px; align-items: flex-start;
@@ -468,6 +479,7 @@
             </div>
 
             <div class="sec-title">主动找你的时间段（在时段内随机时刻发送）</div>
+            <div class="dev-note" id="winShare"></div>
             <div class="card" id="windowList"></div>
             <button class="block small" id="btnAddWindow">+ 加一个时间段</button>
 
@@ -510,6 +522,14 @@
                     <button class="small grow" id="btnTestNotify">测试通知（立刻）</button>
                     <button class="small grow" id="btnTestLater">30 秒后测试</button>
                 </div>
+                <div class="dev-note" id="pendingState"></div>
+                <div class="row" style="gap:8px;margin-top:12px">
+                    <button class="small grow" id="btnRepush">立即重排</button>
+                    <button class="small grow" id="btnExact">允许精确提醒</button>
+                </div>
+                <div class="dev-note">提醒是提前排进系统闹钟的，不用保持 App 在后台：关掉、划掉后台都能准时弹。<br>
+                    想让提醒更准时、不被系统清掉：①点「允许精确提醒」允许「闹钟和提醒」；②系统设置 → 应用 → 想我了吧 → 电池 → 选「无限制（不优化）」，并允许「自启动」。<br>
+                    上面两个开关的震动 / 提示音只管 App 打开时；系统通知的声音和震动由系统通知通道决定（可在 系统设置 → 通知 里调）。</div>
                 <div class="dev-note" id="notifyState"></div>
                 <div class="dev-note" id="diagLine">运行环境检测中…</div>
             </div>
@@ -625,6 +645,11 @@
         var COOL_MS = 7 * 24 * 3600 * 1000; /* 同一句 7 天内不重复 */
         var RECENT_N = 8;                   /* 最近 8 条不重复 */
         var LONG_LEN = 60;                  /* 超过这个字数算长句（只提示，不拦） */
+        /* 排程上限：一次最多往系统闹钟里塞多少条、最多往后排几天。
+           条数够多才能「不常开 App 也不断」——手机上闹钟是系统托管的，App 不用常驻后台。 */
+        var PLAN_MAX = 60;                  /* 一次最多排 60 条 */
+        var PLAN_DAYS_MAX = 14;             /* 至少往后排 3 天，最多 14 天 */
+        var PLAN_DAYS_MIN = 3;
         var MOOD_FACES = [
             { v: 1, e: '😞', l: '很差' },
             { v: 2, e: '😔', l: '低落' },
@@ -762,11 +787,48 @@
             if (s === e) { return false; }
             return s < e ? (min >= s && min < e) : (min >= s || min < e);
         }
+        /* 真正能用的时间段（起止合法、且 结束 > 开始） */
+        function activeWindows(st) {
+            return (st.windows || []).filter(function (w) {
+                return w && w.s && w.e && hhmmToMin(w.e) > hhmmToMin(w.s);
+            });
+        }
+        /* 一次排多少天：条数封顶 60，最多两周、至少 3 天（每天句数越多，覆盖天数越少） */
+        function planDays(dailyMax) {
+            var n = Math.floor(PLAN_MAX / Math.max(1, dailyMax));
+            return Math.max(PLAN_DAYS_MIN, Math.min(PLAN_DAYS_MAX, n));
+        }
+        /* 每天每个时间段分到几条（和 windows 顺序一一对应）。
+           规则：每天最多 min(dailyMax, 时段数 × 2) 条 —— 先每个时段各一条，再从头补第二条。
+           配合下面的「起点每天轮转」，长期看每个时段拿到的总条数是公平的。 */
+        function slotShare(st) {
+            var wins = activeWindows(st);
+            var out = [];
+            for (var i = 0; i < wins.length; i++) { out.push(0); }
+            if (!wins.length) { return out; }
+            var total = Math.min(st.dailyMax, wins.length * 2);
+            for (var j = 0; j < total; j++) { out[j % wins.length]++; }
+            return out;
+        }
+        /* 哪些时间段几乎发不出去（整段都落在安静时段里），返回 1 开始的序号 */
+        function quietClash(st) {
+            var wins = activeWindows(st), bad = [];
+            for (var i = 0; i < wins.length; i++) {
+                var s = hhmmToMin(wins[i].s), e = hhmmToMin(wins[i].e);
+                var pts = [s, Math.floor((s + e) / 2), e - 1];
+                var all = true;
+                for (var j = 0; j < pts.length; j++) {
+                    if (!inQuiet(st.quiet, pts[j])) { all = false; break; }
+                }
+                if (all) { bad.push(i + 1); }
+            }
+            return bad;
+        }
         /* 生成未来 days 天的计划：随机时刻 + 预先生成好内容（App 靠它排系统通知） */
         function buildPlan(state, nowTs, days, rand) {
             rand = rand || Math.random;
-            var st = state.settings, out = [], used = [], d, i;
-            var wins = st.windows.filter(function (w) { return w && w.s && w.e && hhmmToMin(w.e) > hhmmToMin(w.s); });
+            var st = state.settings, out = [], used = [], d, i, t;
+            var wins = activeWindows(st);
             for (d = 0; d < days; d++) {
                 if (!wins.length) { break; }
                 var day = new Date(nowTs);
@@ -774,10 +836,19 @@
                 day.setHours(0, 0, 0, 0);
                 var total = Math.min(st.dailyMax, wins.length * 2);
                 for (i = 0; i < total; i++) {
-                    var w = wins[i % wins.length];
+                    /* 起点每天往后挪一格：句数比时段少时，不会永远是前几个时段发、后面的整天饿着 */
+                    var w = wins[(d + i) % wins.length];
                     var s = hhmmToMin(w.s), e = hhmmToMin(w.e);
                     var min = s + Math.floor(rand() * (e - s));
-                    if (inQuiet(st.quiet, min)) { continue; }
+                    /* 撞进安静时段就重抽（最多 6 次）—— 以前直接丢一格，安静时段一多就经常整天不发 */
+                    if (inQuiet(st.quiet, min)) {
+                        var got = false;
+                        for (t = 0; t < 6; t++) {
+                            var m2 = s + Math.floor(rand() * (e - s));
+                            if (!inQuiet(st.quiet, m2)) { min = m2; got = true; break; }
+                        }
+                        if (!got) { continue; }
+                    }
                     var at = day.getTime() + min * 60000 + Math.floor(rand() * 60) * 1000;
                     if (at <= nowTs + 60000) { continue; }
                     out.push(at);
@@ -987,6 +1058,54 @@
                 return new Set(ids).size === ids.length;
             })(), plan.length + ' 条');
 
+            /* 9b. 时段分配：规则写明白 + 真的公平（以前永远是前几段在发，末尾时段整天饿死） */
+            function segOf(settings, at) {
+                var d = new Date(at), m = d.getHours() * 60 + d.getMinutes();
+                var ws = activeWindows(settings);
+                for (var k = 0; k < ws.length; k++) {
+                    if (m >= hhmmToMin(ws[k].s) && m < hhmmToMin(ws[k].e)) { return k; }
+                }
+                return -1;
+            }
+            var sh = base();
+            sh.settings.dailyMax = 4;
+            ok('分配规则：每天 4 句 · 3 段 → 2/1/1', slotShare(sh.settings).join(',') === '2,1,1', slotShare(sh.settings).join(','));
+            sh.settings.dailyMax = 12;
+            ok('分配规则：每段每天最多 2 条（12 句 → 2/2/2）', slotShare(sh.settings).join(',') === '2,2,2', slotShare(sh.settings).join(','));
+            sh.settings.dailyMax = 2;
+            ok('分配规则：每天 2 句时第 3 段这天轮空（靠轮换补回来）', slotShare(sh.settings).join(',') === '1,1,0', slotShare(sh.settings).join(','));
+            sh.settings.dailyMax = 4;
+            var rot = buildPlan(sh, t0.getTime(), 3);
+            var rc = [0, 0, 0];
+            rot.forEach(function (p) { var k = segOf(sh.settings, p.at); if (k >= 0) { rc[k]++; } });
+            ok('起点轮转：3 个时段各分到 4 条（不再总让前两段发）', rc.join(',') === '4,4,4', rc.join(','));
+            var pc = {}, perDayOk = true;
+            rot.forEach(function (p) { var k = dateKey(p.at); pc[k] = (pc[k] || 0) + 1; });
+            Object.keys(pc).forEach(function (k) { if (pc[k] !== 4) { perDayOk = false; } });
+            ok('每天条数正好等于分配规则算出的 4 条', perDayOk && Object.keys(pc).length === 3, JSON.stringify(pc));
+            ok('排程覆盖天数：每天 4 句 → 14 天', planDays(4) === 14, planDays(4));
+            ok('排程覆盖天数：每天 12 句 → 5 天（60 条封顶）', planDays(12) === 5, planDays(12));
+            ok('排程覆盖天数：最少也排 3 天', planDays(60) === 3, planDays(60));
+            var overCap = 0;
+            for (i = 1; i <= 12; i++) { if (planDays(i) * i > PLAN_MAX) { overCap++; } }
+            ok('1~12 句时一次排程都不超过 ' + PLAN_MAX + ' 条（不会被截断）', overCap === 0, '超限 ' + overCap + ' 档');
+            var qs2 = base();
+            qs2.settings.windows = [{ s: '22:00', e: '23:59' }];
+            qs2.settings.quiet = { s: '23:45', e: '07:30' };
+            qs2.settings.dailyMax = 2;
+            var qp = buildPlan(qs2, t0.getTime(), 5);
+            ok('时段和安静时段搭边时重抽，而不是白丢（10 条一条不少）', qp.length === 10, qp.length + ' 条');
+            ok('重抽之后依然全部避开安静时段', qp.every(function (p) {
+                var d = new Date(p.at);
+                return !inQuiet(qs2.settings.quiet, d.getHours() * 60 + d.getMinutes());
+            }));
+            var inval = base();
+            inval.settings.windows = [{ s: '20:00', e: '18:00' }, { s: '09:00', e: '10:00' }];
+            ok('activeWindows 过滤掉起止颠倒的时段', activeWindows(inval.settings).length === 1, activeWindows(inval.settings).length);
+            var qc = base();
+            qc.settings.windows = [{ s: '01:00', e: '05:00' }, { s: '09:00', e: '11:00' }];
+            ok('quietClash 揪出整段落在安静时段的时段', quietClash(qc.settings).join(',') === '1', quietClash(qc.settings).join(','));
+
             /* 10. 没有可用时间段时返回空计划（不崩） */
             var noWin = base();
             noWin.settings.windows = [];
@@ -1039,7 +1158,7 @@
         var LocalNotif = (CAP && CAP.Plugins && CAP.Plugins.LocalNotifications) || null;
         var FS = (CAP && CAP.Plugins && CAP.Plugins.Filesystem) || null;   /* 备份写文件用 */
         var Share = (CAP && CAP.Plugins && CAP.Plugins.Share) || null;     /* 备份交给系统分享面板 */
-        var APP_VERSION = '1.2.0';      /* 与 package.json 的 version 一致（scripts/check.js 会核对） */
+        var APP_VERSION = '1.3.0';      /* 与 package.json 的 version 一致（scripts/check.js 会核对） */
         var APP_BUILD = 'dev';          /* 打包时由 scripts/build-www.js 用 CI 的构建号替换 */
         var LS_LAST_EXPORT = 'xwlb.lastExport';   /* 上次导出的文件名 + 时间 */
         var LS_UPDATE = 'xwlb.updateCheck';       /* 上次检查更新的结果（24 小时内不重复请求） */
@@ -1336,6 +1455,7 @@
         function rebuildPlan(silent) {
             var now = Date.now();
             state.planBuiltAt = now;
+            renderWinShare();
             if (state.settings.paused) {
                 state.plan = [];
                 save();
@@ -1343,7 +1463,9 @@
                 if (!silent) { toast('已暂停，不会再主动找你'); }
                 return;
             }
-            state.plan = buildPlan(state, now, NATIVE ? 10 : 2);   /* App 里一次排 10 天：少重排＝少打扰 */
+            /* App 里一次排满（最多 60 条 / 14 天）：系统托管闹钟，App 开着不开着都一样准点。
+               网页版只排 2 天，反正页面一关就停了。 */
+            state.plan = buildPlan(state, now, NATIVE ? planDays(state.settings.dailyMax) : 2);
             save();
             pushNative();
             if (!silent) { toast('已重新排好：' + state.plan.length + ' 条待发'); }
@@ -1389,10 +1511,62 @@
             if (hit) { renderStats(); }
         }
         /* 把未来计划写进系统闹钟（关掉 App、没网也能到点弹） */
+        /* 自己排的那批 id 是 1~99；「测试通知」用的是 99 万号，别误伤 */
+        function mineNotifs(res) {
+            return ((res && res.notifications) || []).filter(function (n) { return n && n.id >= 1 && n.id < 100; });
+        }
+        function cancelNative() {
+            if (!NATIVE || !LocalNotif || !LocalNotif.getPending) { return Promise.resolve(); }
+            return LocalNotif.getPending().then(function (res) {
+                var mine = mineNotifs(res);
+                return mine.length ? LocalNotif.cancel({ notifications: mine }) : null;
+            }).catch(function () { return null; });
+        }
+        function setSchedNote(text) {
+            var note = $('schedNote');
+            if (note) { note.dataset.native = '1'; note.textContent = text; }
+        }
+        function fmtPlanAt(at) {
+            if (!at) { return '—'; }
+            var d = new Date(at);
+            return (dateKey(at) === dateKey(Date.now()) ? '今天 ' : (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 ') +
+                pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+        }
+        /* 系统里「真实待发」的状态（不是我们本地以为的计划），设置页照着它显示 */
+        var PENDING = { n: -1, first: 0, last: 0 };
+        function renderPending() {
+            var el = $('pendingState');
+            if (!el) { return; }
+            if (!NATIVE) { el.textContent = '网页版：页面开着才会到点提醒，关掉浏览器就没了。'; return; }
+            if (!state.settings.notify || state.settings.paused) {
+                el.textContent = '已关掉主动提醒：系统里没有待发的闹钟。';
+                return;
+            }
+            if (PENDING.n < 0) { el.textContent = '正在读系统里待发的条数…'; return; }
+            if (!PENDING.n) { el.textContent = '⚠️ 系统里现在一条待发都没有：点「立即重排」；若还是 0，检查系统有没有禁止通知。'; return; }
+            el.textContent = '系统里待发 ' + PENDING.n + ' 条' +
+                (PENDING.first ? ' · 最近 ' + fmtPlanAt(PENDING.first) : '') +
+                (PENDING.last ? ' · 最远 ' + fmtPlanAt(PENDING.last) : '');
+        }
         function pushNative() {
             if (!NATIVE || !LocalNotif) { return; }
             ensureChannel();
-            var list = state.plan.filter(function (p) { return !p.fired; }).slice(0, 48);
+            /* 开关关掉 / 暂停了：不留一条系统闹钟（以前这个开关只写不读，关不掉） */
+            if (!state.settings.notify || state.settings.paused) {
+                PENDING = { n: 0, first: 0, last: 0 };
+                renderPending();
+                setSchedNote(state.settings.paused ? '已暂停，不会再主动找你。' : '「开启通知」关着：系统里不会留下提醒。');
+                cancelNative();
+                return;
+            }
+            var list = state.plan.filter(function (p) { return !p.fired; }).slice(0, PLAN_MAX);
+            if (!list.length) {
+                PENDING = { n: 0, first: 0, last: 0 };
+                renderPending();
+                setSchedNote('暂时没有待发的计划：去上面看看时间段有没有配好。');
+                cancelNative();
+                return;
+            }
             var notifs = list.map(function (p, i) {
                 return {
                     id: i + 1,
@@ -1403,19 +1577,34 @@
                     autoCancel: true
                 };
             });
-            var note = $('schedNote');
-            LocalNotif.getPending().then(function (res) {
-                var old = (res && res.notifications) ? res.notifications : [];
-                /* 只清自己排的计划（id 1~48），别顺手把「30 秒后测试」那条也取消了 */
-                var mine = old.filter(function (n) { return n && n.id >= 1 && n.id < 100; });
-                return mine.length ? LocalNotif.cancel({ notifications: mine }) : null;
+            /* 对账式排程：先把新的写进去（同一个 id 会覆盖旧的），写成功了再清掉「上一批多出来的」。
+               以前是「先全清、再重排」，中间那一下要是 App 被杀 / 排程报错，
+               系统里就一条闹钟都不剩了 —— 这就是「后台被杀后就不提醒」的根因。 */
+            LocalNotif.schedule({ notifications: notifs }).then(function () {
+                return LocalNotif.getPending ? LocalNotif.getPending() : null;
+            }).then(function (res) {
+                var stale = mineNotifs(res).filter(function (n) { return n.id > notifs.length; });
+                return stale.length ? LocalNotif.cancel({ notifications: stale }) : null;
             }).then(function () {
-                if (!notifs.length) { return null; }
-                return LocalNotif.schedule({ notifications: notifs });
-            }).then(function () {
-                if (note) { note.textContent = '已把未来 ' + notifs.length + ' 条排进系统闹钟：关掉 App 也会准时提醒。'; }
+                return LocalNotif.getPending ? LocalNotif.getPending() : null;
+            }).then(function (res) {
+                var mine = mineNotifs(res).sort(function (a, b) {
+                    var x = (a.schedule && a.schedule.at) ? new Date(a.schedule.at).getTime() : 0;
+                    var y = (b.schedule && b.schedule.at) ? new Date(b.schedule.at).getTime() : 0;
+                    return x - y;
+                });
+                PENDING = {
+                    n: mine.length,
+                    first: mine.length ? new Date(mine[0].schedule.at).getTime() : 0,
+                    last: mine.length ? new Date(mine[mine.length - 1].schedule.at).getTime() : 0
+                };
+                renderPending();
+                setSchedNote('已把 ' + mine.length + ' 条排进系统闹钟：关掉 App 也会准时提醒' +
+                    (PENDING.first ? '（最近一条 ' + fmtPlanAt(PENDING.first) + '）' : '') + '。');
             }).catch(function (e) {
-                if (note) { note.textContent = '排程失败：' + (e && e.message ? e.message : e); }
+                renderPending();
+                setSchedNote('排程失败：' + (e && e.message ? e.message : e) +
+                    '（点「立即重排」再试一次；一直失败的话，检查系统有没有禁止本应用发通知）');
             });
         }
         /* ================= 渲染 ================= */
@@ -1571,8 +1760,11 @@
                 var rec = state.records[dateKey(d.getTime())];
                 var v = rec && rec.mood ? rec.mood : 0;
                 if (v) { sum += v; cnt++; }
-                var h = v ? Math.round(v / 5 * 100) : 4;
-                html += '<div class="b' + (v ? '' : ' none') + '"><i style="height:' + h + '%"></i>' +
+                /* 高度 = 分数 / 5，百分比相对「轨道」算（CSS 里已经把日期标签的高度让出来了）：
+                   1~5 分依次是 20/40/60/80/100%，不会再出现「3 分和 5 分差不多高」 */
+                var h = v ? (v / 5 * 100) : 6;
+                html += '<div class="b' + (v ? ' v' + v : ' none') + '">' +
+                    '<div class="track"><i style="height:' + h.toFixed(1) + '%"></i></div>' +
                     '<span>' + (d.getMonth() + 1) + '/' + d.getDate() + '</span></div>';
             }
             box.innerHTML = html;
@@ -1939,9 +2131,37 @@
             };
         }
         /* ---------- 设置 ---------- */
+        /* 时段分配规则预览：让「每段分几条」写明白，不再像开盲盒 */
+        function renderWinShare() {
+            var el = $('winShare');
+            if (!el) { return; }
+            var st = state.settings;
+            var wins = activeWindows(st);
+            if (!wins.length) {
+                el.textContent = '现在一个可用时段都没有：没有时间段就不会主动找你。';
+                return;
+            }
+            var n = slotShare(st);
+            var total = 0;
+            for (var i = 0; i < n.length; i++) { total += n[i]; }
+            var txt = '规则：每个时段先各给 1 条，还有多的从头补（每段每天最多 2 条）→ 每天 ' + total + ' 句：' +
+                n.map(function (c, k) { return '第 ' + (k + 1) + ' 段 ' + c + ' 句'; }).join('、') +
+                '。起点每天往后轮一个时段，长期下来每段分到的一样多';
+            if (st.dailyMax < wins.length) {
+                txt += '。⚠️ 每天句数比时段数还少，靠后的时段会轮不到：把「每天最多几句」调大，或减少时段';
+            } else if (total < st.dailyMax) {
+                txt += '。注：时段数 × 2 = ' + (wins.length * 2) + ' 条已达上限，达不到你设的每天 ' + st.dailyMax + ' 句';
+            }
+            var bad = quietClash(st);
+            if (bad.length) {
+                txt += '。⚠️ 第 ' + bad.join('、') + ' 段整段都在安静时段里，基本发不出来：把时段挪出安静时段，或把安静时段改小';
+            }
+            el.textContent = txt + '。';
+        }
         function renderWindows() {
             var st = state.settings;
             var box = $('windowList');
+            renderWinShare();
             if (!st.windows.length) {
                 box.innerHTML = '<span class="muted">还没有时间段，先加一个吧</span>';
                 return;
@@ -1985,6 +2205,7 @@
             $('notifyState').textContent = msg;
             applyTheme();
             renderNotifyDiag();
+            renderPending();
             /* App 里顺手问一下系统「现在到底给不给发通知」（不弹框） */
             if (NATIVE && LocalNotif && LocalNotif.checkPermissions) {
                 LocalNotif.checkPermissions().then(function (r) {
@@ -2260,10 +2481,13 @@
                 var on = this.checked;
                 state.settings.notify = on;
                 save();
+                /* 这个开关以前只写不读：关掉之后系统闹钟还留着，照样会响。现在关掉就真的清干净 */
+                pushNative();
                 if (on) {
                     requestNotifyPermission(function (okp) {
                         if (!okp) { toast('没拿到通知权限，只能在页面内提醒'); }
                         renderSettings();
+                        pushNative();
                     });
                 } else {
                     renderSettings();
@@ -2347,6 +2571,18 @@
                         else { toast('排程失败，30 秒后用页内横幅提醒', 3600); setTimeout(function () { showBanner(state.settings.appName, body); }, 30000); }
                     });
                 });
+            };
+            /* 立即重排：把计划重新写进系统闹钟，并回读系统里真实待发的条数 */
+            $('btnRepush').onclick = function () {
+                if (!NATIVE) { toast('网页版用不到：页面开着才会提醒'); return; }
+                renderPending();
+                rebuildPlan(true);
+                toast('正在重排并读取系统里的待发条数…', 2600);
+            };
+            /* 精确提醒：Android 12+ 的「闹钟和提醒」权限，不给就只能不精确地响 */
+            $('btnExact').onclick = function () {
+                if (!NATIVE) { toast('网页版不需要这个权限'); return; }
+                ensureExactAlarm(function () { toast('设置返回后，再点「30 秒后测试」验一下'); });
             };
             $('btnGuide').onclick = showGuide;
             $('btnCheckUpdate').onclick = function () { if (UPDATE) { showUpdateSheet(); } else { checkUpdate(true); } };

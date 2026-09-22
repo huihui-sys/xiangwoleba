@@ -71,5 +71,42 @@ if (/var APP_BUILD = 'dev';/.test(html)) {
     console.log("  ✘ 缺少 var APP_BUILD = 'dev'; 占位，打包脚本就没法注入构建号");
 }
 
+/* 踩过坑的地方加静态守卫：这几处改坏了，光看语法检查是发现不了的 */
+const guards = [
+    ['.bars .b .track {', '统计柱有独立的柱区轨道（否则 4 分 5 分会一样高）'],
+    ['flex: 1 1 auto; min-height: 0', '柱区轨道能撑满「总高 − 日期标签」'],
+    ['flex: 0 0 auto; min-height: 4px', '柱子不会被 flex 压缩'],
+    ['var PLAN_MAX = 60;', '排程条数上限 PLAN_MAX'],
+    ['function planDays(dailyMax)', '排程覆盖天数走 planDays()'],
+    ['function slotShare(st)', '时段分配走 slotShare()'],
+    ['function quietClash(st)', '时段 / 安静时段冲突检测'],
+    ['function cancelNative()', '取消系统闹钟（关闭通知、对账排程都要用）'],
+    ['function renderPending()', '回读系统里真实待发的条数']
+];
+guards.forEach(function (g) {
+    if (html.indexOf(g[0]) >= 0) {
+        console.log('  ✔ 保留：' + g[1]);
+    } else {
+        bad++;
+        console.log('  ✘ 缺少 `' + g[0] + '`：' + g[1]);
+    }
+});
+
+/* 这几条是 v1.3.0 修掉的坏写法，禁止再回来 */
+const banned = [
+    [/NATIVE \? 10 : 2/, '排程天数不能再硬编码 10 天（要用 planDays()）'],
+    [/slice\(0, 48\)/, '排程条数不能再硬编码 48 条（要用 PLAN_MAX）'],
+    [/\.bars \.b i \{/, '柱子不能再直接当 .b 的 flex 子项（要套 .track）'],
+    [/wins\[i % wins\.length\]/, '时段不能再固定从第 1 段开始取（要按天轮转）']
+];
+banned.forEach(function (b) {
+    if (b[0].test(html)) {
+        bad++;
+        console.log('  ✘ 发现旧写法：' + b[1]);
+    } else {
+        console.log('  ✔ 没有旧写法：' + b[1]);
+    }
+});
+
 console.log(bad ? '\n检查结果：有 ' + bad + ' 个问题 ❌' : '\n检查结果：全部通过 ✅');
 process.exit(bad ? 1 : 0);

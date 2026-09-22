@@ -20,10 +20,12 @@ if (!m) {
 
 const exported = [
     'CATS', 'BUILTIN', 'MOOD_W', 'COOL_MS', 'RECENT_N', 'LONG_LEN', 'MOOD_FACES', 'MOOD_TAGS',
+    'PLAN_MAX', 'PLAN_DAYS_MIN', 'PLAN_DAYS_MAX',
     'pad2', 'catName', 'catEmoji', 'dateKey', 'hhmmToMin', 'minToHHMM', 'randInt',
     'expandBuiltin', 'moodOf', 'moodBand', 'moodStreak', 'weightedPick', 'pickCat',
     'recentIds', 'pickSentence', 'inQuiet', 'buildPlan', 'parseBulk', 'parseLines',
-    'parseRange', 'filterRecords', 'cmpVersion', 'runSelfTest'
+    'parseRange', 'filterRecords', 'cmpVersion', 'runSelfTest',
+    'activeWindows', 'planDays', 'slotShare', 'quietClash'
 ];
 const factory = new Function(
     '"use strict";\n' + m[1] + '\n;return {' + exported.join(',') + '};'
