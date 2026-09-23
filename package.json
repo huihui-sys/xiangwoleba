@@ -1,6 +1,6 @@
 {
     "name": "xiangwoleba",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "private": true,
     "description": "想我了吧 —— 温柔的自用情感支持小应用（网页 + Android 打包）",
     "scripts": {

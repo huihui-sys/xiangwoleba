@@ -7,7 +7,8 @@
  *   2. values/strings.xml 里的应用名
  *   3. build.gradle 里的固定签名（密钥来自环境变量，见 README「固定签名」）
  *   4. build.gradle 里的 versionName / versionCode
- * 脚本是幂等的：重复跑不会加重复的权限，也不会重复注入签名块。
+ *   5. XwlbSettings 原生小插件（跳系统设置页 + 读电池优化状态），并在 MainActivity 里注册
+ * 脚本是幂等的：重复跑不会加重复的权限，也不会重复注入签名块 / 插件注册。
  *
  * 固定签名相关的环境变量（不设就保持原样，本地调试仍可跑 assembleDebug）：
  *   XWLB_KEYSTORE_PATH        密钥文件路径（如 $RUNNER_TEMP/xwlb.jks）
@@ -37,6 +38,29 @@ const PERMS = [
 ];
 
 let problems = 0;
+
+/* ---------- 共用小工具 ---------- */
+function writeIfChanged(file, text) {
+    const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+    if (old === text) { return 'keep'; }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, text, 'utf8');
+    return old === null ? 'new' : 'update';
+}
+function findFile(dir, name) {
+    if (!fs.existsSync(dir)) { return null; }
+    const stack = [dir];
+    while (stack.length) {
+        const cur = stack.pop();
+        const items = fs.readdirSync(cur, { withFileTypes: true });
+        for (const it of items) {
+            const p = path.join(cur, it.name);
+            if (it.isDirectory()) { stack.push(p); }
+            else if (it.name === name) { return p; }
+        }
+    }
+    return null;
+}
 
 /* ---------- 0. 固定签名用的环境变量 ---------- */
 const KS_PATH = (process.env.XWLB_KEYSTORE_PATH || '').trim();
@@ -169,6 +193,200 @@ if (!fs.existsSync(gradlePath)) {
     } else {
         console.log('  · build.gradle：无需修改（versionName=' + vName +
             '，versionCode=' + (VERSION_CODE || '沿用模板值') + '）');
+    }
+}
+
+/* ---------- 4. XwlbSettings：跳系统设置的小插件 ---------- */
+/* Capacitor 自带的 LocalNotifications 只会弹一次权限框；被 Android 13+ 静默拒掉之后，
+   页面就再也拿不到权限了 —— 而「通知开关 / 闹钟和提醒 / 电池不优化 / 自启动」这些开关
+   全在系统设置里，网页端碰不到。所以注入一个几十行的原生插件，把用户直接送过去。
+   插件缺失时页面会退回文字指引（mood.html 的 openSystemPage），功能不依赖它。 */
+const JAVA_LINES = [
+    'package __PKG__;',
+    '',
+    'import android.content.Context;',
+    'import android.content.Intent;',
+    'import android.net.Uri;',
+    'import android.os.Build;',
+    'import android.os.PowerManager;',
+    'import android.provider.Settings;',
+    '',
+    'import com.getcapacitor.JSObject;',
+    'import com.getcapacitor.Plugin;',
+    'import com.getcapacitor.PluginCall;',
+    'import com.getcapacitor.PluginMethod;',
+    'import com.getcapacitor.annotation.CapacitorPlugin;',
+    '',
+    '/**',
+    ' * 想我了吧 · 系统设置跳转插件（由 scripts/patch-android.js 自动生成，勿手工改）',
+    ' *',
+    ' * 为什么需要它：Android 的通知开关、闹钟和提醒、电池不优化、自启动都藏在系统设置里，',
+    ' * 网页端够不着。Capacitor 的 LocalNotifications 只会弹一次权限框，被 Android 13+',
+    ' * 静默拒掉之后就没有任何补救手段 —— 用户既收不到提醒，也不知道该去哪儿打开。',
+    ' */',
+    '@CapacitorPlugin(name = "XwlbSettings")',
+    'public class XwlbSettingsPlugin extends Plugin {',
+    '',
+    '    /** 打开对应系统设置页：page = notify | exact | battery | auto | appdetails */',
+    '    @PluginMethod',
+    '    public void openSettings(PluginCall call) {',
+    '        String page = call.getString("page", "notify");',
+    '        try {',
+    '            start(buildIntent(page));',
+    '            JSObject ret = new JSObject();',
+    '            ret.put("ok", true);',
+    '            ret.put("page", page);',
+    '            call.resolve(ret);',
+    '        } catch (Exception e) {',
+    '            /* 有些 ROM 把标准页面改没了：退回「应用详情」，至少用户能自己往下点 */',
+    '            try {',
+    '                start(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkgUri()));',
+    '                JSObject ret = new JSObject();',
+    '                ret.put("ok", true);',
+    '                ret.put("page", "appdetails");',
+    '                ret.put("fallback", true);',
+    '                call.resolve(ret);',
+    '            } catch (Exception e2) {',
+    '                call.reject("打不开系统设置：" + e2.getMessage());',
+    '            }',
+    '        }',
+    '    }',
+    '',
+    '    /** 电池优化有没有对本应用放行（放行了后台才不容易被掐掉） */',
+    '    @PluginMethod',
+    '    public void isIgnoringBatteryOptimizations(PluginCall call) {',
+    '        boolean ignoring = false;',
+    '        try {',
+    '            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {',
+    '                PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);',
+    '                if (pm != null) {',
+    '                    ignoring = pm.isIgnoringBatteryOptimizations(getContext().getPackageName());',
+    '                }',
+    '            } else {',
+    '                ignoring = true;',
+    '            }',
+    '        } catch (Exception e) {',
+    '            ignoring = false;',
+    '        }',
+    '        JSObject ret = new JSObject();',
+    '        ret.put("ignoring", ignoring);',
+    '        call.resolve(ret);',
+    '    }',
+    '',
+    '    private Uri pkgUri() {',
+    '        return Uri.parse("package:" + getContext().getPackageName());',
+    '    }',
+
+    '',
+    '    private Intent buildIntent(String page) {',
+    '        if ("exact".equals(page) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {',
+    '            /* Android 12+：「闹钟和提醒」这个特殊权限页 */',
+    '            return new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkgUri());',
+    '        }',
+    '        if ("battery".equals(page)) {',
+    '            /* 申请「不优化电池」页面 */',
+    '            return new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkgUri());',
+    '        }',
+    '        if ("auto".equals(page)) {',
+    '            return autoStartIntent();',
+    '        }',
+    '        if ("notify".equals(page) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {',
+    '            /* Android 8+：直达本应用的通知渠道列表（xwlb2 那个渠道在这里单独打开） */',
+    '            Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);',
+    '            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());',
+    '            return intent;',
+    '        }',
+    '        return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkgUri());',
+    '    }',
+    '',
+    '    /* 自启动管理页：各家 ROM 的 Activity 都不一样，挨个试，试不到就退回应用详情页 */',
+    '    private Intent autoStartIntent() {',
+    '        Intent[] list = new Intent[] {',
+    '            new Intent().setClassName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),',
+    '            new Intent().setClassName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),',
+    '            new Intent().setClassName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"),',
+    '            new Intent().setClassName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),',
+    '            new Intent().setClassName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity"),',
+    '            new Intent().setClassName("com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity")',
+    '        };',
+    '        for (Intent intent : list) {',
+    '            try {',
+    '                if (getContext().getPackageManager().resolveActivity(intent, 0) != null) {',
+    '                    return intent;',
+    '                }',
+    '            } catch (Exception e) {',
+    '                /* 换下一个 ROM 试试 */',
+    '            }',
+    '        }',
+    '        return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkgUri());',
+    '    }',
+    '',
+    '    private void start(Intent intent) {',
+    '        if (intent == null) {',
+    '            throw new IllegalStateException("没有可用的系统设置页");',
+    '        }',
+    '        if (getActivity() != null) {',
+    '            getActivity().startActivity(intent);',
+    '        } else {',
+    '            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);',
+    '            getContext().startActivity(intent);',
+    '        }',
+    '    }',
+    '}',
+    ''
+];
+const JAVA_SRC = JAVA_LINES.join('\n');
+
+/* 写 Java 文件 + 在 MainActivity 里注册（registerPlugin 必须放在 super.onCreate() 之前，
+   Bridge 在 onCreate 里才创建，插件注册得赶在那之前） */
+const MARK_MA = '// xwlb-settings-plugin';
+const javaRoot = path.join(root, 'android', 'app', 'src', 'main', 'java');
+const mainActivity = findFile(javaRoot, 'MainActivity.java');
+if (!mainActivity) {
+    console.error('✘ 找不到 MainActivity.java（先执行 npx cap add android）');
+    problems++;
+} else {
+    const maSrc = fs.readFileSync(mainActivity, 'utf8');
+    const pmPkg = maSrc.match(/^\s*package\s+([\w.]+)\s*;/m);
+    if (!pmPkg) {
+        console.error('✘ MainActivity.java 里读不到 package，无法生成插件');
+        problems++;
+    } else {
+        const pkg = pmPkg[1];
+        /* 插件跟 MainActivity 放同一个包，MainActivity 里就不用额外 import 了 */
+        const javaFile = path.join(path.dirname(mainActivity), 'XwlbSettingsPlugin.java');
+        const howJava = writeIfChanged(javaFile, JAVA_SRC.replace(/__PKG__/g, pkg));
+        console.log(howJava === 'keep'
+            ? '  · XwlbSettingsPlugin.java：已是最新（包名 ' + pkg + '）'
+            : '  ✔ XwlbSettingsPlugin.java：' + (howJava === 'new' ? '已生成' : '已更新') + '（包名 ' + pkg + '）');
+
+        if (maSrc.indexOf('XwlbSettingsPlugin.class') >= 0) {
+            console.log('  · MainActivity.java：插件已注册，幂等跳过');
+        } else if (maSrc.indexOf('extends BridgeActivity') < 0) {
+            console.error('✘ MainActivity.java 不像 Capacitor 模板（没有 extends BridgeActivity）');
+            problems++;
+        } else {
+            let ma = maSrc;
+            if (!/import\s+android\.os\.Bundle\s*;/.test(ma)) {
+                ma = ma.replace(/^(package\s+[\w.]+\s*;)/m, '$1\n\nimport android.os.Bundle;');
+            }
+            const call = '        ' + MARK_MA + '：注册「跳系统设置」插件（由 scripts/patch-android.js 注入）\n' +
+                '        registerPlugin(XwlbSettingsPlugin.class);\n';
+            const onC = ma.match(/void\s+onCreate\s*\(\s*Bundle[^)]*\)\s*\{/);
+            if (onC) {
+                ma = ma.replace(onC[0], onC[0] + '\n' + call);
+            } else {
+                /* 官方模板的 MainActivity 是个空类，这里给它补一个 onCreate */
+                const at = ma.lastIndexOf('}');
+                ma = ma.slice(0, at) +
+                    '\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n' + call +
+                    '        super.onCreate(savedInstanceState);\n    }\n' + ma.slice(at);
+            }
+            const howMa = writeIfChanged(mainActivity, ma);
+            console.log(howMa === 'keep'
+                ? '  · MainActivity.java：无需修改'
+                : '  ✔ MainActivity.java：已注册 XwlbSettings 插件' + (onC ? '（挂在现有 onCreate 里）' : '（新建了 onCreate）'));
+        }
     }
 }
 

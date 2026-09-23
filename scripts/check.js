@@ -76,7 +76,7 @@ const guards = [
     ['.bars .b .track {', '统计柱有独立的柱区轨道（否则 4 分 5 分会一样高）'],
     ['flex: 1 1 auto; min-height: 0', '柱区轨道能撑满「总高 − 日期标签」'],
     ['flex: 0 0 auto; min-height: 4px', '柱子不会被 flex 压缩'],
-    ['var PLAN_MAX = 60;', '排程条数上限 PLAN_MAX'],
+    ['var PLAN_MAX = 180;', '排程条数上限 PLAN_MAX'],
     ['function planDays(dailyMax)', '排程覆盖天数走 planDays()'],
     ['function slotShare(st)', '时段分配走 slotShare()'],
     ['function quietClash(st)', '时段 / 安静时段冲突检测'],
