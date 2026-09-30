@@ -348,6 +348,37 @@
         .kv:last-child { border-bottom: 0; }
         .kv span:last-child { color: var(--fg2); }
         .dev-note { font-size: 12px; color: var(--fg3); margin-top: 6px; }
+        /* ---- 这个月的打卡格子：一天一格；有图案 = 打过卡，虚线淡格 = 那天忘了记，点一下就能补 ---- */
+        .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .grid7 .w { text-align: center; font-size: 11px; color: var(--fg3); }
+        .grid7 .d {
+            position: relative; height: 46px; border-radius: 10px; padding: 1px;
+            border: 1px solid var(--line); background: transparent;
+            color: var(--fg3); font-size: 11px; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .grid7 .d .e { font-size: 19px; line-height: 1.1; }
+        .grid7 .d .n { position: absolute; right: 4px; bottom: 0; font-size: 9px; color: var(--fg3); }
+        .grid7 .d .pen { position: absolute; left: 3px; top: 0; font-size: 8px; font-style: normal; }
+        .grid7 .d.blank { border: 0; }
+        /* 虚线淡格 = 还能补的那天，点进去直接补记 */
+        .grid7 .d.miss { border-style: dashed; border-color: var(--accent2); background: rgba(255, 178, 107, .07); }
+        .grid7 .d.miss:active { transform: scale(.94); }
+        /* 太早的日子 / 未来的日子：补不了，压暗 */
+        .grid7 .d.off { opacity: .3; }
+        .grid7 .d.filled { border-style: dashed; }
+        .grid7 .d.v1, .grid7 .d.v2 { border-color: #7b86d8; background: rgba(123, 134, 216, .16); }
+        .grid7 .d.v3 { border-color: #d8b25e; background: rgba(216, 178, 94, .16); }
+        .grid7 .d.v4 { border-color: #ffb26b; background: rgba(255, 178, 107, .18); }
+        .grid7 .d.v5 { border-color: #ff6f91; background: rgba(255, 111, 145, .2); }
+        /* ---- 装饰：背景小点 + 角落里的食物图案（纯 CSS / emoji，不引任何图片） ---- */
+        body::before {
+            content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background-image: radial-gradient(var(--fg3) 1px, transparent 1px);
+            background-size: 22px 22px; opacity: .06;
+        }
+        .floats { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        .floats span { position: absolute; font-size: 42px; opacity: .07; }
         #selftest {
             position: fixed; inset: 0; z-index: 200; overflow: auto; padding: 16px;
             background: var(--code-bg); font-family: Consolas, Menlo, monospace; font-size: 12px;
@@ -440,6 +471,22 @@
                     <span class="muted" id="trendStat">—</span>
                     <button class="ghost small" id="btnMoodHistory">全部记录</button>
                 </div>
+            </div>
+
+            <div class="sec-title">这个月</div>
+            <div class="card">
+                <div class="row between">
+                    <span class="muted" id="monTitle">—</span>
+                    <span class="tiny" id="monStat"></span>
+                </div>
+                <div class="grid7" id="monHead" style="margin:10px 0 6px"></div>
+                <div class="grid7" id="monGrid"></div>
+                <div class="row" style="gap:8px;margin-top:12px">
+                    <button class="ghost small grow" id="btnMonPrev">上个月</button>
+                    <button class="ghost small grow" id="btnMonNext">下个月</button>
+                </div>
+                <div class="dev-note">图案是那天的心情分（🥀 🍋 🍚 🍰 🍓），🖊 是补记的。<br>
+                    点虚线淡格就能补上那天的卡（最多补最近 30 天），连续打卡天数会立刻跟着变。</div>
             </div>
         </section>
         <!-- ============ 我的句子 ============ -->
@@ -576,6 +623,14 @@
             </div>
         </section>
     </main>
+
+    <!-- 角落里的食物小图案：纯装饰，不拦点击、也不参与布局 -->
+    <div class="floats" aria-hidden="true">
+        <span style="left:4px;top:16%">🍡</span>
+        <span style="right:6px;top:30%">🍰</span>
+        <span style="left:8px;bottom:26%">🍋</span>
+        <span style="right:4px;bottom:16%">🍓</span>
+    </div>
 
     <nav class="tabbar" id="tabbar">
         <button data-tab="today" class="on"><span class="e">💬</span>今天</button>
@@ -1162,8 +1217,135 @@
             ok('cmpVersion：1.10.0 比 1.2.0 新（按数字段比）', cmpVersion('1.10.0', '1.2.0') === 1, cmpVersion('1.10.0', '1.2.0'));
             ok('cmpVersion：1.2.0 比 1.2.1 旧', cmpVersion('1.2.0', '1.2.1') === -1);
 
+            /* 13. 补记 / 本月格子（v1.5.0） */
+            ok('dayKeyShift 往前一天跨月', dayKeyShift('2026-03-01', -1) === '2026-02-28', dayKeyShift('2026-03-01', -1));
+            ok('dayKeyShift 往后一天跨年', dayKeyShift('2025-12-31', 1) === '2026-01-01', dayKeyShift('2025-12-31', 1));
+            ok('dayKeyShift 认得闰年 2 月', dayKeyShift('2024-02-29', 1) === '2024-03-01', dayKeyShift('2024-02-29', 1));
+            ok('dayKeyShift 格式不对返回空串', dayKeyShift('2026/03/01', 1) === '' && dayKeyShift('', 0) === '');
+            var bfT = '2026-09-20';
+            ok('昨天可以补', backfillOk('2026-09-19', bfT).ok === true, backfillOk('2026-09-19', bfT).why);
+            ok('今天也能补（等于改今天）', backfillOk(bfT, bfT).ok === true, backfillOk(bfT, bfT).why);
+            ok('未来的日子不能补', backfillOk('2026-09-21', bfT).ok === false, backfillOk('2026-09-21', bfT).why);
+            ok('超过 ' + BACKFILL_MAX_DAYS + ' 天不能补', backfillOk('2026-08-20', bfT).ok === false, backfillOk('2026-08-20', bfT).why);
+            ok('正好 ' + BACKFILL_MAX_DAYS + ' 天前还能补', backfillOk('2026-08-21', bfT).ok === true, backfillOk('2026-08-21', bfT).why);
+            ok('日期格式不对不能补', backfillOk('2026-9-1', bfT).ok === false && backfillOk('', bfT).ok === false);
+            var bfRecs = { '2026-09-20': { mood: 3 }, '2026-09-19': { mood: 4 }, '2026-09-18': { mood: 2 } };
+            ok('连续打卡：算上今天 3 天', checkinStreakFrom(bfRecs, '2026-09-20') === 3, checkinStreakFrom(bfRecs, '2026-09-20'));
+            ok('今天还没打卡就从昨天算起', checkinStreakFrom(bfRecs, '2026-09-21') === 3, checkinStreakFrom(bfRecs, '2026-09-21'));
+            ok('中间断了一天就停', checkinStreakFrom({ '2026-09-20': { mood: 3 }, '2026-09-18': { mood: 3 } }, '2026-09-20') === 1);
+            ok('补上缺的那天，连续天数就 +1', checkinStreakFrom(bfRecs, '2026-09-20') === 3 &&
+                checkinStreakFrom({ '2026-09-20': { mood: 3 } }, '2026-09-20') === 1);
+            ok('缺的日期算得出来（全勤时为空）', missingDays(bfRecs, '2026-09-20', 2).length === 0,
+                missingDays(bfRecs, '2026-09-20', 2).join(','));
+            ok('缺的日期倒序、最多 days 天',
+                missingDays({ '2026-09-19': { mood: 3 } }, '2026-09-20', 3).join(',') === '2026-09-18,2026-09-17',
+                missingDays({ '2026-09-19': { mood: 3 } }, '2026-09-20', 3).join(','));
+            var refD = new Date();
+            var mDays = new Date(refD.getFullYear(), refD.getMonth() + 1, 0).getDate();
+            var mLead = (new Date(refD.getFullYear(), refD.getMonth(), 1).getDay() + 6) % 7;
+            var mg0 = monthGrid(0, {}, dateKey(Date.now()), BACKFILL_MAX_DAYS);
+            ok('月历格子 = 月初空位 + 整月天数', mg0.cells.length === mLead + mDays, mg0.cells.length + ' vs ' + (mLead + mDays));
+            ok('月初空位是 blank，第一格是 1 号',
+                mg0.cells.filter(function (c) { return c.state === 'blank'; }).length === mLead && mg0.cells[mLead].day === 1);
+            ok('今天以后的格子是 off（不能提前打卡）',
+                mg0.cells.filter(function (c) { return c.state === 'off'; }).length === mDays - refD.getDate(),
+                mg0.cells.filter(function (c) { return c.state === 'off'; }).length + ' / 应 ' + (mDays - refD.getDate()));
+            ok('补记范围为 0 天时只有今天能补',
+                monthGrid(-1, {}, dateKey(Date.now()), 0).cells.every(function (c) { return c.state !== 'miss'; }) &&
+                monthGrid(0, {}, dateKey(Date.now()), 0).cells.some(function (c) {
+                    return c.state === 'miss' && c.key === dateKey(Date.now());
+                }));
+            var mgRec = {};
+            mgRec[dateKey(Date.now())] = { mood: 5, filled: 1 };
+            ok('打过卡的那天是 done，带心情分和补记标记',
+                monthGrid(0, mgRec, dateKey(Date.now()), 0).cells.some(function (c) {
+                    return c.state === 'done' && c.mood === 5 && c.filled === true;
+                }));
+            ok('foodOf：1~5 有图案，其它为空', foodOf(1) !== '' && foodOf(5) !== '' && foodOf(0) === '' && foodOf(9) === '');
+            ok('monthCn 文案正确', /^\d{4} 年 \d{1,2} 月$/.test(monthCn(-1)) && monthCn(0) !== monthCn(-1), monthCn(-1));
+
             var pass = R.filter(function (x) { return x.ok; }).length;
             return { list: R, pass: pass, total: R.length, allPass: pass === R.length };
+        }
+        /* ---------- 打卡：补记 + 本月格子（纯逻辑，scripts/selftest.js 会抽出去测） ---------- */
+        var BACKFILL_MAX_DAYS = 30;                      /* 最多能补多少天以前的卡 */
+        var MOOD_FOOD = ['🥀', '🍋', '🍚', '🍰', '🍓'];  /* 心情 1~5 分对应的食物图案 */
+        var WEEK_CN = ['一', '二', '三', '四', '五', '六', '日']; /* 月历表头，周一开头 */
+
+        function foodOf(mood) {
+            var v = parseInt(mood, 10);
+            if (!v || v < 1 || v > MOOD_FOOD.length) { return ''; }
+            return MOOD_FOOD[v - 1];
+        }
+        /* 日期字符串加减天数：'2026-03-01' -1 → '2026-02-28'（跨月 / 跨年 / 闰年交给 Date） */
+        function dayKeyShift(key, delta) {
+            var m = String(key == null ? '' : key).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!m) { return ''; }
+            var d = new Date(+m[1], +m[2] - 1, +m[3]);
+            d.setDate(d.getDate() + (parseInt(delta, 10) || 0));
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+        }
+        /* 这天能不能补记：格式要对、不能是未来、不能早于 BACKFILL_MAX_DAYS 天前 */
+        function backfillOk(key, todayKey, maxDays) {
+            var max = (maxDays == null ? BACKFILL_MAX_DAYS : maxDays);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(String(key == null ? '' : key))) { return { ok: false, why: '日期格式不对' }; }
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(String(todayKey == null ? '' : todayKey))) { return { ok: false, why: '今天的日期不对' }; }
+            if (key > todayKey) { return { ok: false, why: '还没到那天，不能提前打卡' }; }
+            if (key < dayKeyShift(todayKey, -max)) { return { ok: false, why: '只能补最近 ' + max + ' 天' }; }
+            return { ok: true, why: '' };
+        }
+        /* 连续打卡天数（含今天）；今天还没打卡就从昨天算起 —— 补记之后这个数会跟着变 */
+        function checkinStreakFrom(records, todayKey) {
+            var recs = records || {};
+            var key = todayKey || dateKey(Date.now());
+            var n = 0;
+            if (!recs[key]) { key = dayKeyShift(key, -1); }
+            for (var i = 0; i < 400 && key; i++) {
+                if (!recs[key]) { break; }
+                n++;
+                key = dayKeyShift(key, -1);
+            }
+            return n;
+        }
+        /* 最近 days 天里还没打卡的日子（倒序，不含今天） */
+        function missingDays(records, todayKey, days) {
+            var recs = records || {};
+            var out = [];
+            for (var i = 1; i <= (days || 7); i++) {
+                var k = dayKeyShift(todayKey, -i);
+                if (!k) { break; }
+                if (!recs[k]) { out.push(k); }
+            }
+            return out;
+        }
+        /* 本月 / 上个月的格子：每格 { key, day, state, mood, filled }
+           state：blank=月初空位 miss=能补 done=打过卡 off=补不了（太早或未来） */
+        function monthGrid(offset, records, todayKey, maxDays) {
+            var recs = records || {};
+            var now = new Date();
+            var first = new Date(now.getFullYear(), now.getMonth() + (parseInt(offset, 10) || 0), 1);
+            var y = first.getFullYear(), m = first.getMonth();
+            var days = new Date(y, m + 1, 0).getDate();
+            var lead = (first.getDay() + 6) % 7;   /* 表头周一开头：周日(0) 排到最后一列 */
+            var cells = [], i, key, rec, chk;
+            for (i = 0; i < lead; i++) { cells.push({ key: '', day: 0, state: 'blank', mood: 0, filled: false }); }
+            for (i = 1; i <= days; i++) {
+                key = y + '-' + pad2(m + 1) + '-' + pad2(i);
+                rec = recs[key];
+                if (rec && rec.mood) {
+                    cells.push({ key: key, day: i, state: 'done', mood: rec.mood, filled: !!rec.filled });
+                    continue;
+                }
+                chk = backfillOk(key, todayKey, maxDays);
+                cells.push({ key: key, day: i, state: chk.ok ? 'miss' : 'off', mood: 0, filled: false });
+            }
+            return { y: y, m: m, cells: cells };
+        }
+        function monthCn(offset) {
+            var d = new Date();
+            d.setDate(1);
+            d.setMonth(d.getMonth() + (parseInt(offset, 10) || 0));
+            return d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月';
         }
         /* ==== PURE_ENGINE_END ==== */
     </script>
@@ -1179,7 +1361,7 @@
         /* 打包时由 scripts/patch-android.js 注入的小原生插件：一键跳到系统的通知 / 闹钟和提醒 / 电池 /
            自启动设置页。老包里没有它也没关系，openSystemPage() 会退回文字指引，功能不依赖它 */
         var Sys = (CAP && CAP.Plugins && CAP.Plugins.XwlbSettings) || null;
-        var APP_VERSION = '1.4.0';      /* 与 package.json 的 version 一致（scripts/check.js 会核对） */
+        var APP_VERSION = '1.5.0';      /* 与 package.json 的 version 一致（scripts/check.js 会核对） */
         var APP_BUILD = 'dev';          /* 打包时由 scripts/build-www.js 用 CI 的构建号替换 */
         var LS_LAST_EXPORT = 'xwlb.lastExport';   /* 上次导出的文件名 + 时间 */
         var LS_UPDATE = 'xwlb.updateCheck';       /* 上次检查更新的结果（24 小时内不重复请求） */
@@ -1974,17 +2156,9 @@
             var m = moodOf(state, Date.now());
             $('chipMood').textContent = m ? (MOOD_FACES[m - 1].e + ' ' + MOOD_FACES[m - 1].l) : '今天还没打卡';
         }
-        /* 连续打卡天数（含今天） */
+        /* 连续打卡天数（含今天）：算法在纯逻辑区 checkinStreakFrom()，这里只是喂数据 */
         function checkinStreak() {
-            var n = 0, d = new Date();
-            d.setHours(0, 0, 0, 0);
-            if (!state.records[dateKey(d.getTime())]) { d.setDate(d.getDate() - 1); }
-            for (var i = 0; i < 400; i++) {
-                if (!state.records[dateKey(d.getTime())]) { break; }
-                n++;
-                d.setDate(d.getDate() - 1);
-            }
-            return n;
+            return checkinStreakFrom(state.records, dateKey(Date.now()));
         }
         function switchTab(name) {
             var views = ['today', 'checkin', 'sentences', 'settings'];
@@ -2021,6 +2195,7 @@
             if (ta.value !== draft.note) { ta.value = draft.note; }
             updateNoteCount();
             renderTrend();
+            renderMonth();
             renderTopbar();
         }
         function updateNoteCount() {
@@ -2046,13 +2221,21 @@
             box.innerHTML = html;
             $('trendStat').textContent = cnt ? ('近 7 天打卡 ' + cnt + ' 天 · 平均 ' + (sum / cnt).toFixed(1) + ' 分') : '近 7 天还没打卡';
         }
+        /* 写入一天的打卡记录：今天和补记共用一个入口，补记的带 filled 标记 */
+        function writeRecord(key, mood, tags, note) {
+            var today = dateKey(Date.now());
+            var rec = { mood: mood, tags: (tags || []).slice(), note: note || '', at: Date.now() };
+            if (key !== today) { rec.filled = 1; }
+            state.records[key] = rec;
+            save();
+            return key === today;
+        }
         function saveMood() {
             if (!draft.mood) { toast('先点一个心情吧'); return; }
             draft.note = $('moodNote').value.slice(0, 200);
             var today = dateKey(Date.now());
             var first = !state.records[today] || !state.records[today].mood;
-            state.records[today] = { mood: draft.mood, tags: draft.tags.slice(), note: draft.note, at: Date.now() };
-            save();
+            writeRecord(today, draft.mood, draft.tags, draft.note);
             renderCheckin();
             if (first) {
                 /* 打完卡立刻给一句贴合心情的话，再重排后续计划 */
@@ -2064,6 +2247,133 @@
                 toast('已更新今天的心情');
             }
             renderTopbar();
+        }
+        /* ---------- 补记：以前忘了打卡的日子，随手补上 ---------- */
+        var bfDraft = { key: '', mood: 0, tags: [] };
+        var bfBackToHist = false;   /* 从「全部记录」点进来的，关掉这层要回到那层 */
+        function closeBfSheet() {
+            closeSheet();
+            if (bfBackToHist) { bfBackToHist = false; showMoodHistory(); }
+        }
+        function openBackfillSheet(key, fromHist) {
+            var today = dateKey(Date.now());
+            /* 只有真的从「全部记录」点进来才回那层：closeSheet() 只是隐藏遮罩，内容还在 DOM 里，
+               不能用 $('histList') 是否存在来判断 */
+            bfBackToHist = !!fromHist;
+            var min = dayKeyShift(today, -BACKFILL_MAX_DAYS);
+            var chips = [1, 2, 3].map(function (i) {
+                var d = dayKeyShift(today, -i);
+                var name = i === 1 ? '昨天' : (i === 2 ? '前天' : '三天前');
+                return '<button class="small" data-bf="' + d + '">' + name + ' ' + d.slice(5) + '</button>';
+            }).join('');
+            openSheet('<h3>补记打卡</h3>' +
+                '<div class="muted" style="margin-top:6px">哪天忘了记就补哪天，最多补最近 ' + BACKFILL_MAX_DAYS + ' 天。</div>' +
+                '<div class="row wrap" id="bfChips" style="gap:8px;margin-top:10px">' + chips + '</div>' +
+                '<input type="date" id="bfDate" min="' + min + '" max="' + today + '" style="margin-top:10px">' +
+                '<div class="dev-note" id="bfHint"></div>' +
+                '<div class="moods" id="bfMood" style="margin-top:14px"></div>' +
+                '<div class="tags" id="bfTags" style="margin-top:12px"></div>' +
+                '<textarea id="bfNote" rows="3" maxlength="200" placeholder="这天想对自己说点什么？（选填）" style="margin-top:12px"></textarea>' +
+                '<button class="primary block" id="bfSave" style="margin-top:12px">保存补记</button>' +
+                '<button class="block ghost small" id="bfCancel" style="margin-top:8px">算了</button>');
+            $('bfChips').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (b) { selectBfDay(b.getAttribute('data-bf')); }
+            };
+            $('bfDate').onchange = function () { selectBfDay(this.value); };
+            $('bfMood').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                bfDraft.mood = parseInt(b.getAttribute('data-mood'), 10);
+                renderBfPickers();
+            };
+            $('bfTags').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (!b) { return; }
+                var t = b.getAttribute('data-tag'), i = bfDraft.tags.indexOf(t);
+                if (i >= 0) { bfDraft.tags.splice(i, 1); } else { bfDraft.tags.push(t); }
+                renderBfPickers();
+            };
+            $('bfSave').onclick = saveBackfill;
+            $('bfCancel').onclick = closeBfSheet;
+            selectBfDay(key || dayKeyShift(today, -1));
+        }
+        /* 换一天：把那天已有的记录读进来（没有就留空），并说清这天能不能补 */
+        function selectBfDay(key) {
+            var today = dateKey(Date.now());
+            var chk = backfillOk(key, today, BACKFILL_MAX_DAYS);
+            var rec = state.records[key];
+            bfDraft.key = key;
+            bfDraft.mood = (rec && rec.mood) ? rec.mood : 0;
+            bfDraft.tags = (rec && rec.tags) ? rec.tags.slice() : [];
+            $('bfDate').value = key;
+            $('bfNote').value = (rec && rec.note) ? rec.note : '';
+            $('bfHint').textContent = chk.ok
+                ? ((rec && rec.mood) ? '这天已经打过卡，可以改' : '这天还没打卡，补上就好')
+                : chk.why;
+            $('bfSave').disabled = !chk.ok;
+            var btns = $('bfChips').getElementsByTagName('button');
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].classList.toggle('on', btns[i].getAttribute('data-bf') === key);
+            }
+            renderBfPickers();
+        }
+        function renderBfPickers() {
+            $('bfMood').innerHTML = MOOD_FACES.map(function (f) {
+                return '<button data-mood="' + f.v + '" class="' + (bfDraft.mood === f.v ? 'on' : '') + '">' +
+                    '<span class="e">' + f.e + '</span><span class="l">' + f.l + '</span></button>';
+            }).join('');
+            $('bfTags').innerHTML = MOOD_TAGS.map(function (t) {
+                return '<button data-tag="' + esc(t) + '" class="' + (bfDraft.tags.indexOf(t) >= 0 ? 'on' : '') + '">' + esc(t) + '</button>';
+            }).join('');
+        }
+        function saveBackfill() {
+            var today = dateKey(Date.now());
+            var chk = backfillOk(bfDraft.key, today, BACKFILL_MAX_DAYS);
+            if (!chk.ok) { toast(chk.why); return; }
+            if (!bfDraft.mood) { toast('先点一个心情吧'); return; }
+            var isToday = writeRecord(bfDraft.key, bfDraft.mood, bfDraft.tags, $('bfNote').value.slice(0, 200));
+            var dayTxt = isToday ? '今天' : bfDraft.key.slice(5);
+            closeBfSheet();
+            renderCheckin();
+            if (isToday) {
+                /* 补的正好是今天：和直接打卡一样，重排后面的提醒 */
+                rebuildPlan(true);
+                rollSentence('');
+                toast('今天的心情更新好了');
+            } else {
+                /* 补的是过去的日子：不动已经排好的通知，免得把后面的句子和闹钟全重写 */
+                toast(dayTxt + ' 补记好了 ' + (foodOf(bfDraft.mood) || '🍮'), 2600);
+            }
+        }
+        /* ---------- 这个月的格子（一天一格，有图案 = 这天打过卡） ---------- */
+        var monOffset = 0;
+        function renderMonth() {
+            var grid = monthGrid(monOffset, state.records, dateKey(Date.now()), BACKFILL_MAX_DAYS);
+            $('monTitle').textContent = monthCn(monOffset) + (monOffset === 0 ? ' · 这个月' : '');
+            $('monHead').innerHTML = WEEK_CN.map(function (w) { return '<span class="w">' + w + '</span>'; }).join('');
+            var done = 0, miss = 0, html = '';
+            grid.cells.forEach(function (c) {
+                if (c.state === 'blank') { html += '<span class="d blank"></span>'; return; }
+                if (c.state === 'done') {
+                    done++;
+                    html += '<button class="d v' + c.mood + (c.filled ? ' filled' : '') + '" data-day="' + c.key + '">' +
+                        '<span class="e">' + foodOf(c.mood) + '</span><span class="n">' + c.day + '</span>' +
+                        (c.filled ? '<i class="pen">🖊</i>' : '') + '</button>';
+                    return;
+                }
+                if (c.state === 'miss') {
+                    /* 虚线淡格：点一下直接补那天的卡 */
+                    miss++;
+                    html += '<button class="d miss" data-day="' + c.key + '"><span class="n">' + c.day + '</span></button>';
+                    return;
+                }
+                html += '<span class="d off"><span class="n">' + c.day + '</span></span>';
+            });
+            $('monGrid').innerHTML = html;
+            $('monStat').textContent = done
+                ? ('打卡 ' + done + ' 天' + (miss ? ' · 还缺 ' + miss + ' 天可补' : ' · 全勤 🎉'))
+                : (miss ? '还缺 ' + miss + ' 天可补' : '');
         }
         /* 全部打卡记录：可按日期找（2026-09 整月 / 2026-09-19 单日 / 09-19 每年的这天 / 2026 整年），
            也可以按关键词在备注、标签、心情名里找 */
@@ -2078,6 +2388,7 @@
             if (!total) { toast('还没有打卡记录'); return; }
             var now = new Date();
             openSheet('<h3>全部打卡记录</h3>' +
+                '<div class="muted" style="margin-top:4px">点某天后面的「补记 / 改」就能补那天的卡（🖊 = 补记过的）。</div>' +
                 '<input type="text" id="histQ" placeholder="找某天：2026-09 / 2026-09-19 / 09-19，或输个词" style="margin-top:10px">' +
                 '<div class="catfilter" id="histQuick" style="margin-top:10px"></div>' +
                 '<div class="tiny" id="histStat" style="margin:2px 0 8px"></div>' +
@@ -2111,8 +2422,10 @@
                 keys.slice(0, 300).forEach(function (k) {
                     var r = state.records[k] || {};
                     var f = MOOD_FACES[(r.mood || 3) - 1];
-                    html += '<div class="kv"><span>' + esc(k) + '</span><span>' + f.e + ' ' + f.l +
-                        (r.tags && r.tags.length ? ' · ' + esc(r.tags.join('/')) : '') + '</span></div>';
+                    html += '<div class="kv"><span>' + esc(k) + (r.filled ? ' 🖊' : '') + '</span><span>' + f.e + ' ' + f.l +
+                        (r.tags && r.tags.length ? ' · ' + esc(r.tags.join('/')) : '') + '</span></div>' +
+                        '<div class="row" style="justify-content:flex-end;margin:-2px 0 6px">' +
+                        '<button class="ghost small" data-fill="' + esc(k) + '">补记 / 改</button></div>';
                     if (r.note) { html += '<div class="tiny" style="margin:-4px 0 8px">' + esc(r.note) + '</div>'; }
                 });
                 if (keys.length > 300) { html += '<div class="tiny" style="margin-top:8px">只显示前 300 条，输个更具体的日期试试</div>'; }
@@ -2127,6 +2440,10 @@
                 renderHist();
             };
             renderHist();
+            $('histList').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (b && b.getAttribute('data-fill')) { openBackfillSheet(b.getAttribute('data-fill'), true); }
+            };
         }
         /* ---------- 句子管理 ---------- */
         var sentFilter = 'all';
@@ -2680,6 +2997,13 @@
             };
             $('btnSaveMood').onclick = saveMood;
             $('btnMoodHistory').onclick = showMoodHistory;
+            /* 本月格子：翻月 + 点格子直接补记 */
+            $('btnMonPrev').onclick = function () { monOffset = Math.max(-24, monOffset - 1); renderMonth(); };
+            $('btnMonNext').onclick = function () { monOffset = Math.min(0, monOffset + 1); renderMonth(); };
+            $('monGrid').onclick = function (e) {
+                var b = e.target.closest('button');
+                if (b && b.getAttribute('data-day')) { openBackfillSheet(b.getAttribute('data-day')); }
+            };
             /* 句子页 */
             $('btnBulkAdd').onclick = showBulk;
             $('btnNewOne').onclick = function () { editSentence(''); };

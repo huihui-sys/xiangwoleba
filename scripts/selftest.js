@@ -25,7 +25,9 @@ const exported = [
     'expandBuiltin', 'moodOf', 'moodBand', 'moodStreak', 'weightedPick', 'pickCat',
     'recentIds', 'pickSentence', 'inQuiet', 'buildPlan', 'parseBulk', 'parseLines',
     'parseRange', 'filterRecords', 'cmpVersion', 'runSelfTest',
-    'activeWindows', 'planDays', 'slotShare', 'quietClash'
+    'activeWindows', 'planDays', 'slotShare', 'quietClash',
+    'BACKFILL_MAX_DAYS', 'MOOD_FOOD', 'WEEK_CN', 'foodOf', 'dayKeyShift', 'backfillOk',
+    'checkinStreakFrom', 'missingDays', 'monthGrid', 'monthCn'
 ];
 const factory = new Function(
     '"use strict";\n' + m[1] + '\n;return {' + exported.join(',') + '};'

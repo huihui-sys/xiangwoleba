@@ -81,7 +81,12 @@ const guards = [
     ['function slotShare(st)', '时段分配走 slotShare()'],
     ['function quietClash(st)', '时段 / 安静时段冲突检测'],
     ['function cancelNative()', '取消系统闹钟（关闭通知、对账排程都要用）'],
-    ['function renderPending()', '回读系统里真实待发的条数']
+    ['function renderPending()', '回读系统里真实待发的条数'],
+    ['var BACKFILL_MAX_DAYS = 30;', '补记天数上限 BACKFILL_MAX_DAYS'],
+    ['function backfillOk(key, todayKey, maxDays)', '能不能补这天的判断走 backfillOk()（不能补未来 / 超过上限）'],
+    ['function checkinStreakFrom(records, todayKey)', '连续打卡天数走纯函数（补记之后能自检）'],
+    ['function monthGrid(offset, records, todayKey, maxDays)', '本月格子是纯函数（计算和渲染分开）'],
+    ['function writeRecord(key, mood, tags, note)', '打卡写入只有一个入口（今天 / 补记共用）']
 ];
 guards.forEach(function (g) {
     if (html.indexOf(g[0]) >= 0) {
@@ -97,7 +102,8 @@ const banned = [
     [/NATIVE \? 10 : 2/, '排程天数不能再硬编码 10 天（要用 planDays()）'],
     [/slice\(0, 48\)/, '排程条数不能再硬编码 48 条（要用 PLAN_MAX）'],
     [/\.bars \.b i \{/, '柱子不能再直接当 .b 的 flex 子项（要套 .track）'],
-    [/wins\[i % wins\.length\]/, '时段不能再固定从第 1 段开始取（要按天轮转）']
+    [/wins\[i % wins\.length\]/, '时段不能再固定从第 1 段开始取（要按天轮转）'],
+    [/state\.records\[today\] = \{ mood: draft\.mood/, '打卡不能再直接把记录写死在今天（要走 writeRecord()，否则补记会被覆盖）']
 ];
 banned.forEach(function (b) {
     if (b[0].test(html)) {
