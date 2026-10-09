@@ -1,0 +1,47 @@
+# 想我了吧（xiangwoleba）· 改代码前必读
+
+**先读 `CODE_MAP.md`（代码地图），再只读目标区段。不要为了「保险」全文通读 `mood.html`（3262 行），很贵也没必要。**
+
+## 1. 项目形态（别破坏它）
+
+- `mood.html` 是**唯一源文件**，一个文件装完 HTML + CSS + JS，双击/丢静态托管就能跑。**没有构建步骤、没有框架、没有 npm 依赖**（`dependencies` 只给 Capacitor 打包用）。
+- 代码风格：ES5 风格（`var` + `function`，不用箭头函数/模板串/`let`）、4 空格缩进、中文注释与中文文案、DOM 取值一律走 `$('id')`、拼接 HTML 一律走 `esc()`。
+- 样式只用现有 CSS 变量（`--bg/--fg/--fg2/--fg3/--accent/--accent2`）和现有 class（`.card` / `.row` / `.small` / `.ghost` / `.primary` / `.muted` / `.tiny` / `.dev-note`）。
+- **不新增图片资源**：装饰优先用 emoji 或纯 CSS。真要新增静态文件，必须同步 `scripts/build-www.js` 的 `files` 数组，否则不会进 APK。
+- 不引入新依赖（`npm install` 只该出现在 Capacitor 相关的场景）。
+
+## 2. 改动的固定套路
+
+1. 定位：读 `CODE_MAP.md` → 用 `Select-String` 找锚点 → 只读那几十行。
+2. 纯逻辑进 `PURE_ENGINE` 区；DOM / 存储 / 通知进应用层。
+   **应用层新函数尽量放在 `saveMood()` 之后**（≈2233 行起）：`scripts/smoke-notify.js` 靠 `indexOf` 抽 `mineNotifs → 渲染标题` 和 `renderTrend → saveMood` 两段切片，插在中间会被拉进沙箱执行。
+3. **不许改 `CODE_MAP.md` 第 4 节列出的锚点注释/函数签名**（smoke 测试靠它们切片）。
+4. 新纯逻辑函数 → 登记进 `scripts/selftest.js` 的 `exported`。
+5. 修掉一类坏写法 → 在 `scripts/check.js` 的 `banned` 加一条；新增容易改坏的结构 → 在 `guards` 加一条。
+6. 版本号三处同步：`mood.html` 的 `var APP_VERSION`（check.js 会核对）、`package.json` 的 `version`、必要的 `README` 说明。
+7. 数据**只加字段、不改老字段含义**（老数据缺字段按「没有」处理，例：没有 `filled` 就是当天真打卡）。
+8. 验证：先 `npm run test:quick`，提交前 `npm test` 全绿。
+9. 改完 `mood.html` 行号若变动，回 `CODE_MAP.md` 第 2 节更新数字。
+
+## 3. 行为红线（已有测试钉住，别踩）
+
+- 打卡写入只能走 `writeRecord(key, mood, tags, note)`，**不许**直接 `state.records[today] = {...}`。
+- 补「过去的日子」**绝不许**调用 `rebuildPlan()` / `rollSentence()`（只刷新打卡页与连续天数）；补「今天」才按直接打卡处理。
+- 补记范围由 `backfillOk()` 判定（不能补未来、不能超过 `BACKFILL_MAX_DAYS`）。
+- 排程天数只能走 `planDays()`，条数上限只能用 `PLAN_MAX`（不许硬编码 10 / 48）。
+- 网页 / App 双形态都要能用：`NATIVE` 为真走 Capacitor 插件，为假走浏览器 API，缺能力时要有文字兜底。
+
+## 4. 环境与工具坑（Windows / PowerShell 5.1 / OneDrive）
+
+- 仓库在 OneDrive 同步目录下，**别在仓库里留临时文件**；需要临时输出就写 `$env:TEMP`。
+- 终端就一个 PowerShell 5.1：**不要把长命令（尤其带超长中文参数的）交给它**，PSReadLine 会崩（`ArgumentOutOfRangeException`）。`git commit` 请把信息写成文件再 `git commit -F`。
+- 命令输出经常抓不到：改成 `... | Out-File -Encoding utf8 文件` 再读文件；`>` 重定向出来的是 UTF-16，读起来会乱码。
+- `search_codebase` 的索引可能是旧的，关键结论用 `Select-String` 交叉验证。
+- `editor` 工具单次 `new_text` 太大（约 6000 字符以上）会失败，拆成多个小编辑。
+- `git push` 需要交互式凭据，AI 跑不通 —— 提交完交给用户推，并提醒「推送会触发 CI 自动发 Release」。
+- 这台机器上 `npm` 会撞 PowerShell 执行策略报错（`npm.ps1` 不许运行），**请用 `npm.cmd test`**（或直接 `node scripts/xxx.js`）；管道里的中文会被 PS 5.1 弄乱码，要数字/计数就用 node 自己 parse，别用 `Select-String` 匹配 emoji。
+
+## 5. 交付要求
+
+- 看不到 UI/真机效果：改动完成后，要在回复里写清**给用户的验收步骤**（打开 `mood.html?selftest=1`、覆盖安装、点哪里看什么）。
+- 提交信息用中文，格式参考历史：`v1.5.0：短标题` + 若干 `- 具体做了什么 / 修了什么真实缺陷`；真实缺陷比功能清单更值得写。
