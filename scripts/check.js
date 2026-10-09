@@ -86,6 +86,8 @@ const guards = [
     ['function backfillOk(key, todayKey, maxDays)', '能不能补这天的判断走 backfillOk()（不能补未来 / 超过上限）'],
     ['function checkinStreakFrom(records, todayKey)', '连续打卡天数走纯函数（补记之后能自检）'],
     ['function monthGrid(offset, records, todayKey, maxDays)', '本月格子是纯函数（计算和渲染分开）'],
+    ['function decorOf(key)', '角落图案按天轮换走纯函数 decorOf()（不能用随机数，否则每次刷新都变）'],
+    ['function decorStyle(key)', '背景底纹按周轮换走纯函数 decorStyle()'],
     ['function writeRecord(key, mood, tags, note)', '打卡写入只有一个入口（今天 / 补记共用）']
 ];
 guards.forEach(function (g) {

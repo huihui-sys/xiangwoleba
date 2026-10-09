@@ -27,7 +27,8 @@ const exported = [
     'parseRange', 'filterRecords', 'cmpVersion', 'runSelfTest',
     'activeWindows', 'planDays', 'slotShare', 'quietClash',
     'BACKFILL_MAX_DAYS', 'MOOD_FOOD', 'WEEK_CN', 'foodOf', 'dayKeyShift', 'backfillOk',
-    'checkinStreakFrom', 'missingDays', 'monthGrid', 'monthCn'
+    'checkinStreakFrom', 'missingDays', 'monthGrid', 'monthCn',
+    'FLOAT_SLOTS', 'DECOR_SETS', 'DECOR_STYLES', 'decorOf', 'decorStyle'
 ];
 const factory = new Function(
     '"use strict";\n' + m[1] + '\n;return {' + exported.join(',') + '};'

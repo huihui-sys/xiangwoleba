@@ -60,6 +60,9 @@
             --code-bg: #0b0d13;
             --code-ok: #6ee7a8;
             --code-bad: #ff8f9c;
+            /* 卡片质感：深色下用一层很淡的白高光 + 投影，浅色主题单独给值 */
+            --card-shadow: 0 10px 24px -20px rgba(0, 0, 0, .8);
+            --hairline: rgba(255, 255, 255, .05);
         }
         /* 白昼主题：暖黄纸感，只换颜色，布局完全一致 */
         html[data-theme="light"] {
@@ -87,6 +90,8 @@
             --code-bg: #f7efe1;
             --code-ok: #1c8f5f;
             --code-bad: #c1264a;
+            --card-shadow: 0 8px 20px -20px rgba(96, 76, 44, .5);
+            --hairline: rgba(255, 255, 255, .75);
         }
         * {
             box-sizing: border-box;
@@ -157,12 +162,25 @@
             border-radius: var(--radius);
             padding: 16px;
             margin-bottom: 12px;
+            box-shadow: inset 0 1px 0 var(--hairline), var(--card-shadow);
         }
         .sec-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
             font-size: 13px;
             color: var(--fg2);
             margin: 18px 4px 8px;
             letter-spacing: .4px;
+        }
+        /* 标题前的小竖条：分区更清楚，不用换字体也不用加图标 */
+        .sec-title::before {
+            content: "";
+            flex: 0 0 auto;
+            width: 3px;
+            height: 12px;
+            border-radius: 2px;
+            background: linear-gradient(180deg, var(--accent), var(--accent2));
         }
         .row { display: flex; align-items: center; gap: 10px; }
         .row.between { justify-content: space-between; }
@@ -227,6 +245,7 @@
         .hero .cat-tag {
             display: inline-block; font-size: 12px; color: var(--accent2);
             border: 1px solid rgba(255, 178, 107, .4); border-radius: 999px; padding: 3px 10px;
+            background: rgba(255, 178, 107, .09);
         }
         .hero .sentence {
             font-size: 23px;
@@ -301,11 +320,18 @@
             border-top: 1px solid var(--line);
         }
         .tabbar button {
+            position: relative;
             flex: 1; border: 0; background: transparent; border-radius: 12px;
             color: var(--fg3); font-size: 11px; padding: 6px 0 5px; line-height: 1.35;
         }
-        .tabbar button .e { display: block; font-size: 20px; }
+        .tabbar button .e { display: block; font-size: 20px; transition: transform .18s ease; }
         .tabbar button.on { color: var(--accent); background: rgba(255, 111, 145, .09); }
+        .tabbar button.on .e { transform: translateY(-1px) scale(1.12); }
+        /* 选中的那格底下点一个小圆点，比只有颜色更容易一眼看出在哪 */
+        .tabbar button.on::after {
+            content: ""; position: absolute; left: 50%; bottom: 1px; margin-left: -2px;
+            width: 4px; height: 4px; border-radius: 50%; background: currentColor;
+        }
         /* ---- 弹层 / 提示 ---- */
         .mask {
             position: fixed; inset: 0; z-index: 60; background: var(--mask-bg);
@@ -371,14 +397,37 @@
         .grid7 .d.v3 { border-color: #d8b25e; background: rgba(216, 178, 94, .16); }
         .grid7 .d.v4 { border-color: #ffb26b; background: rgba(255, 178, 107, .18); }
         .grid7 .d.v5 { border-color: #ff6f91; background: rgba(255, 111, 145, .2); }
-        /* ---- 装饰：背景小点 + 角落里的食物图案（纯 CSS / emoji，不引任何图片） ---- */
+        /* ---- 装饰：背景底纹 + 角落里的食物图案（纯 CSS / emoji，不引任何图片） ----
+           底纹有 3 套，renderFloats() 按「周」写 data-decor；角落图案按「天」换一组 */
         body::before {
             content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
             background-image: radial-gradient(var(--fg3) 1px, transparent 1px);
             background-size: 22px 22px; opacity: .06;
         }
+        html[data-decor="grid"] body::before {
+            background-image: linear-gradient(var(--fg3) 1px, transparent 1px),
+                linear-gradient(90deg, var(--fg3) 1px, transparent 1px);
+            background-size: 26px 26px;
+            opacity: .05;
+        }
+        html[data-decor="diag"] body::before {
+            background-image: repeating-linear-gradient(45deg, var(--fg3) 0 1px, transparent 1px 13px);
+            background-size: auto;
+            opacity: .05;
+        }
         .floats { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
         .floats span { position: absolute; font-size: 42px; opacity: .07; }
+        /* 打卡 / 补记成功时轻轻弹一下（saveMood / saveBackfill 里调 bump()） */
+        @keyframes pop {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pop { animation: pop .45s cubic-bezier(.3, .9, .4, 1.2); }
+        /* 系统里关掉动画的用户（含省电模式）就别弹了 */
+        @media (prefers-reduced-motion: reduce) {
+            .view, .sheet, .pop { animation: none; }
+        }
         #selftest {
             position: fixed; inset: 0; z-index: 200; overflow: auto; padding: 16px;
             background: var(--code-bg); font-family: Consolas, Menlo, monospace; font-size: 12px;
@@ -435,8 +484,8 @@
                 <div class="dev-note" id="schedNote"></div>
             </div>
 
-            <div class="sec-title">最近的几句</div>
-            <div class="card" id="recentList"><span class="muted">还没有记录</span></div>
+            <div class="sec-title">🍃 最近的几句</div>
+            <div class="card" id="recentList"><span class="muted">🍃 还没有记录</span></div>
         </section>
 
         <!-- ============ 打卡 ============ -->
@@ -464,7 +513,7 @@
                 <div class="dev-note">心情会影响 App 主动找你说什么：低落时多安慰陪伴，开心时多夸夸你。</div>
             </div>
 
-            <div class="sec-title">最近 7 天</div>
+            <div class="sec-title">🍃 最近 7 天</div>
             <div class="card">
                 <div class="bars" id="trendBars"></div>
                 <div class="row between" style="margin-top:8px">
@@ -473,7 +522,7 @@
                 </div>
             </div>
 
-            <div class="sec-title">这个月</div>
+            <div class="sec-title">🗓 这个月</div>
             <div class="card">
                 <div class="row between">
                     <span class="muted" id="monTitle">—</span>
@@ -535,7 +584,7 @@
                 </div>
             </div>
 
-            <div class="sec-title">主动找你的时间段（在时段内随机时刻发送）</div>
+            <div class="sec-title">🕒 主动找你的时间段（在时段内随机时刻发送）</div>
             <div class="dev-note" id="winShare"></div>
             <div class="card" id="windowList"></div>
             <button class="block small" id="btnAddWindow">+ 加一个时间段</button>
@@ -554,14 +603,14 @@
                 </div>
             </div>
 
-            <div class="sec-title">外观</div>
+            <div class="sec-title">🎨 外观</div>
             <div class="card">
                 <div class="muted" style="margin-bottom:8px">主题（选「跟随系统」时，手机切成深色就一起变）</div>
                 <div class="catfilter" id="themePicker"></div>
                 <div class="dev-note">只影响页面配色；桌面图标和启动闪屏仍是深色。</div>
             </div>
 
-            <div class="sec-title">通知</div>
+            <div class="sec-title">🔔 通知</div>
             <div class="card">
                 <div class="row between">
                     <div class="grow">开启通知</div>
@@ -597,7 +646,7 @@
                 <div class="dev-note" id="diagLine">运行环境检测中…</div>
             </div>
 
-            <div class="sec-title">数据</div>
+            <div class="sec-title">📦 数据</div>
             <div class="card">
                 <div class="kv"><span>句子总数</span><span id="statSent">0</span></div>
                 <div class="kv"><span>打卡天数</span><span id="statDays">0</span></div>
@@ -613,7 +662,7 @@
             <button class="block small" id="btnGuide">安装与保活指引（安卓必看）</button>
             <div class="tiny" style="text-align:center;margin:14px 0 6px">数据只存在这台设备上 · <span id="appVersion">v1.2.0</span></div>
 
-            <div class="sec-title">关于 / 更新</div>
+            <div class="sec-title">💾 关于 / 更新</div>
             <div class="card">
                 <div class="kv"><span>版本</span><span id="aboutVer">—</span></div>
                 <div class="kv"><span>构建号</span><span id="aboutBuild">—</span></div>
@@ -624,13 +673,8 @@
         </section>
     </main>
 
-    <!-- 角落里的食物小图案：纯装饰，不拦点击、也不参与布局 -->
-    <div class="floats" aria-hidden="true">
-        <span style="left:4px;top:16%">🍡</span>
-        <span style="right:6px;top:30%">🍰</span>
-        <span style="left:8px;bottom:26%">🍋</span>
-        <span style="right:4px;bottom:16%">🍓</span>
-    </div>
+    <!-- 角落里的食物小图案：纯装饰，不拦点击、也不参与布局；内容由 renderFloats() 按天换一组，所以这里是空的 -->
+    <div class="floats" id="floats" aria-hidden="true"></div>
 
     <nav class="tabbar" id="tabbar">
         <button data-tab="today" class="on"><span class="e">💬</span>今天</button>
@@ -1264,6 +1308,26 @@
             ok('foodOf：1~5 有图案，其它为空', foodOf(1) !== '' && foodOf(5) !== '' && foodOf(0) === '' && foodOf(9) === '');
             ok('monthCn 文案正确', /^\d{4} 年 \d{1,2} 月$/.test(monthCn(-1)) && monthCn(0) !== monthCn(-1), monthCn(-1));
 
+            /* 10. 装饰轮换：纯装饰，但「同一天稳定、别用随机数」这条要钉住，否则每次刷新都换图案 */
+            ok('角落图案：同一天永远是同一组', decorOf('2026-09-20').join('') === decorOf('2026-09-20').join(''),
+                decorOf('2026-09-20').join(''));
+            ok('角落图案：每组都 ' + FLOAT_SLOTS.length + ' 枚，和角落数量对得上', DECOR_SETS.every(function (g) {
+                return g.length === FLOAT_SLOTS.length;
+            }), DECOR_SETS.length + ' 组');
+            var decSeen = {};
+            for (i = 0; i < 7; i++) { decSeen[decorOf(dayKeyShift('2026-09-20', -i)).join('')] = 1; }
+            ok('角落图案：连续 7 天至少 3 组不同（有变化度）', Object.keys(decSeen).length >= 3, Object.keys(decSeen).length + ' 组');
+            ok('角落图案：空日期 / null 也不炸',
+                decorOf('').length === FLOAT_SLOTS.length && decorOf(null).length === FLOAT_SLOTS.length);
+            var stMon = decorStyle('2026-08-31');    /* 2026-08-31 是周一 */
+            ok('底纹：同一周之内 7 天都一样',
+                decorStyle('2026-08-31') === stMon && decorStyle('2026-09-01') === stMon && decorStyle('2026-09-06') === stMon,
+                stMon);
+            var stSeen = {};
+            for (i = 0; i < 5; i++) { stSeen[decorStyle(dayKeyShift('2026-08-31', -7 * i))] = 1; }
+            ok('底纹：连续 5 周里会有变化', Object.keys(stSeen).length >= 2, Object.keys(stSeen).join(','));
+            ok('底纹：空日期退回预设值，不炸', DECOR_STYLES.indexOf(decorStyle('')) >= 0, decorStyle(''));
+
             var pass = R.filter(function (x) { return x.ok; }).length;
             return { list: R, pass: pass, total: R.length, allPass: pass === R.length };
         }
@@ -1347,6 +1411,38 @@
             d.setMonth(d.getMonth() + (parseInt(offset, 10) || 0));
             return d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月';
         }
+        /* ---------- 装饰：角落图案按天换、背景底纹按周换 ----------
+           纯装饰，不碰任何状态，也不参与打卡 / 排程计算；想加图案只改这两张表。
+           用日期做哈希（不是随机数）：同一天永远同一个结果，刷新多少次都一样。 */
+        var FLOAT_SLOTS = [                 /* 4 个角落位置：l/r = 左右偏移，t/b = 上下百分比 */
+            { l: 4, t: 16 }, { r: 6, t: 30 }, { l: 8, b: 26 }, { r: 4, b: 16 }
+        ];
+        var DECOR_SETS = [                  /* 6 组 × 4 枚，全是 emoji，不引图片资源 */
+            ['🍡', '🍰', '🍋', '🍓'],
+            ['🍵', '🍪', '🌸', '🌙'],
+            ['🍜', '🍩', '🍇', '⭐'],
+            ['🥐', '🍯', '🌻', '🫧'],
+            ['🍙', '🍫', '🍊', '🎈'],
+            ['🧋', '🥞', '🍒', '✨']
+        ];
+        var DECOR_STYLES = ['dots', 'grid', 'diag'];   /* 底纹三套，对应 CSS 里的 html[data-decor] */
+        function decorHash(s, seed, mul) {
+            var h = seed, i;
+            for (i = 0; i < s.length; i++) { h = (h * mul + s.charCodeAt(i)) % 1000003; }
+            return h;
+        }
+        function decorOf(key) {
+            var s = String(key == null ? '' : key);
+            return DECOR_SETS[decorHash(s, 0, 31) % DECOR_SETS.length];
+        }
+        function decorStyle(key) {
+            var mon = dayKeyShift(key, 0);
+            if (!mon) { return DECOR_STYLES[0]; }
+            var dow = new Date(mon + 'T00:00:00').getDay();   /* 0 = 周日 */
+            if (isNaN(dow)) { return DECOR_STYLES[0]; }
+            mon = dayKeyShift(mon, -((dow + 6) % 7));         /* 先退到本周周一：一周之内稳定 */
+            return DECOR_STYLES[decorHash(mon, 7, 17) % DECOR_STYLES.length];
+        }
         /* ==== PURE_ENGINE_END ==== */
     </script>
 
@@ -1361,7 +1457,7 @@
         /* 打包时由 scripts/patch-android.js 注入的小原生插件：一键跳到系统的通知 / 闹钟和提醒 / 电池 /
            自启动设置页。老包里没有它也没关系，openSystemPage() 会退回文字指引，功能不依赖它 */
         var Sys = (CAP && CAP.Plugins && CAP.Plugins.XwlbSettings) || null;
-        var APP_VERSION = '1.5.0';      /* 与 package.json 的 version 一致（scripts/check.js 会核对） */
+        var APP_VERSION = '1.6.0';      /* 与 package.json 的 version 一致（scripts/check.js 会核对） */
         var APP_BUILD = 'dev';          /* 打包时由 scripts/build-www.js 用 CI 的构建号替换 */
         var LS_LAST_EXPORT = 'xwlb.lastExport';   /* 上次导出的文件名 + 时间 */
         var LS_UPDATE = 'xwlb.updateCheck';       /* 上次检查更新的结果（24 小时内不重复请求） */
@@ -2152,9 +2248,22 @@
             document.title = name;
             $('appBrand').textContent = name;
             var st = checkinStreak();
-            $('chipStreak').textContent = st > 0 ? ('连续打卡 ' + st + ' 天') : '还没开始打卡';
+            $('chipStreak').textContent = st > 0 ? ('🔥 连续打卡 ' + st + ' 天') : '🌱 还没开始打卡';
             var m = moodOf(state, Date.now());
-            $('chipMood').textContent = m ? (MOOD_FACES[m - 1].e + ' ' + MOOD_FACES[m - 1].l) : '今天还没打卡';
+            $('chipMood').textContent = m ? (MOOD_FACES[m - 1].e + ' ' + MOOD_FACES[m - 1].l) : '🌱 今天还没打卡';
+        }
+        /* 角落图案 + 背景底纹：每天 / 每周换一次，全都来自纯逻辑区的 decorOf() / decorStyle() */
+        function renderFloats() {
+            var box = $('floats');
+            if (box) {
+                var set = decorOf(dateKey(Date.now()));
+                box.innerHTML = FLOAT_SLOTS.map(function (p, i) {
+                    var pos = (p.l != null ? 'left:' + p.l + 'px;' : 'right:' + p.r + 'px;') +
+                        (p.t != null ? 'top:' + p.t + '%;' : 'bottom:' + p.b + '%;');
+                    return '<span style="' + pos + '">' + set[i] + '</span>';
+                }).join('');
+            }
+            document.documentElement.setAttribute('data-decor', decorStyle(dateKey(Date.now())));
         }
         /* 连续打卡天数（含今天）：算法在纯逻辑区 checkinStreakFrom()，这里只是喂数据 */
         function checkinStreak() {
@@ -2237,6 +2346,7 @@
             var first = !state.records[today] || !state.records[today].mood;
             writeRecord(today, draft.mood, draft.tags, draft.note);
             renderCheckin();
+            bump($('btnSaveMood'));       /* 按钮轻轻弹一下，就是「记下了」的反馈 */
             if (first) {
                 /* 打完卡立刻给一句贴合心情的话，再重排后续计划 */
                 rebuildPlan(true);
@@ -2336,6 +2446,7 @@
             var dayTxt = isToday ? '今天' : bfDraft.key.slice(5);
             closeBfSheet();
             renderCheckin();
+            bump($('monGrid'));          /* 补记完让格子图弹一下：弹层关了，反馈留在页面上 */
             if (isToday) {
                 /* 补的正好是今天：和直接打卡一样，重排后面的提醒 */
                 rebuildPlan(true);
@@ -2345,6 +2456,16 @@
                 /* 补的是过去的日子：不动已经排好的通知，免得把后面的句子和闹钟全重写 */
                 toast(dayTxt + ' 补记好了 ' + (foodOf(bfDraft.mood) || '🍮'), 2600);
             }
+        }
+        /* 打卡 / 补记成功：让某个元素轻轻弹一下。纯装饰：取不到元素、或者环境不支持动画，直接跳过，
+           绝不影响打卡结果。注意这段落在冒烟测试抽取的切片里，所以只能用 $() 和 classList。 */
+        function bump(el) {
+            if (!el || !el.classList || !el.addEventListener) { return; }
+            el.classList.add('pop');
+            el.addEventListener('animationend', function onEnd() {
+                el.classList.remove('pop');
+                el.removeEventListener('animationend', onEnd);
+            });
         }
         /* ---------- 这个月的格子（一天一格，有图案 = 这天打过卡） ---------- */
         var monOffset = 0;
@@ -3225,6 +3346,7 @@
         function boot(keepTab) {
             var cur = $('tabbar').querySelector('button.on');
             renderTopbar();
+            renderFloats();
             renderCatFilter();
             renderCard();
             renderRecent();

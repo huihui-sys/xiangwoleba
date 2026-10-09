@@ -1,7 +1,7 @@
 # 代码地图 · CODE_MAP
 
-> 给「改这个项目的人 / AI」看的索引。**先读这一页 + 目标区域，不要全文通读 `mood.html`（3262 行 / 181 KB）。**
-> 行号基于 v1.5.0，只作参考；真正稳定的定位物是下面那些**注释锚点**。大改动后请顺手更新第 2 节的行号。
+> 给「改这个项目的人 / AI」看的索引。**先读这一页 + 目标区域，不要全文通读 `mood.html`（3415 行 / 189 KB）。**
+> 行号基于 v1.6.0，只作参考；真正稳定的定位物是下面那些**注释锚点**。大改动后请顺手更新第 2 节的行号。
 
 ## 1. 仓库结构
 
@@ -21,33 +21,34 @@
 | `.github/workflows/android.yml` | 动到 `mood.html` / `scripts/**` / `package.json` / 本配置时，push 到 main（或手动 Run workflow）即跑 `npm test` → 打 APK → 发 Release（tag = package.json version） |
 | `www/`、`android/` | 生成物，`.gitignore` 里，不入库 |
 
-## 2. `mood.html` 分区（行号 = v1.5.0）
+## 2. `mood.html` 分区（行号 = v1.6.0）
 
 | 行号 | 区段 | 内容 |
 |---|---|---|
 | 1–12 | `<head>` | meta / 主题色 / manifest |
 | 13–31 | 首屏防闪 `<script>` | 渲染前定好 `data-theme`（独立 script 块） |
-| 32–390 | `<style>` | 主题变量 `--bg/--fg/--accent`；`.card`；`.bars` 统计柱（含 `.track`）；`.grid7` 月历格子 352–373；`body::before` 点阵纹理 375；`.floats` 角落 emoji 380 |
-| 403–649 | HTML 视图 | `#view-today`(404)、`#view-checkin`(443)、`#view-sentences`(493)、`#view-settings`(521)；底部 tab 636；共用遮罩 `#sheetMask`/`#sheetBody`(642)、`#toast`(643)、`#banner`(644)、`#selftest`(649) |
-| 650–1351 | `<script>` ① 纯逻辑区 | `PURE_ENGINE_START`(651) … `PURE_ENGINE_END`(1350)：类目、语料、选句、排程规则、打卡统计、补记/月历纯函数（1271 起） |
-| 1353–3289 | `<script>` ② 应用层 | 见下 |
-| 1355–1455 | 存储 / 基础设施 | `LS_KEY='xwlb.v1'`、`defaultState()`(1397)、`loadState()`(1419)、`save()`(1440)、`toast()`(1443)、`openSheet()`(1450)、`closeSheet()`(1454) |
-| 1456–1820 | 通知 / 权限 / 主题 | `beep`、`ensureExactAlarm`(1478)、`ensureChannel`(1500)、`ensureNotifyPermission`(1523)、`refreshDiag`(1631)、`renderPermCard`(1682)、`openSystemPage`(1720)、`applyTheme`(1797) |
-| 1821–2067 | 排程 | `rebuildPlan`(1828)、`tick`(1868)、`mineNotifs`(1892)、`cancelNative`(1895)、`planSig`(1918)、`txtHash`(1928)、`sameAsPlan`(1935)、`renderPending`(1949)、`pushNative`(1963)、`writeNotifs`(2028) |
-| 2068–2177 | 今天页渲染 | `renderCard`(2073)、`rollSentence`(2080)、`renderHints`(2109)、`renderStats`(2145)、`renderTopbar`(2150)、`checkinStreak`(2160)、`switchTab`(2163) |
-| 2178–2250 | 打卡 | `renderCheckin`(2180)、`updateNoteCount`(2201)、`renderTrend`(2205)、`writeRecord`(2225)、`saveMood`(2233) |
-| 2251–2377 | **补记 + 本月格子**（v1.5.0） | `bfDraft`/`bfBackToHist`(2252)、`closeBfSheet`(2254)、`openBackfillSheet`(2258)、`selectBfDay`(2302)、`renderBfPickers`(2321)、`saveBackfill`(2330)、`renderMonth`(2351) |
-| 2378–2447 | 全部记录 | `monthKey`(2380)、`showMoodHistory`(2386)：内嵌 `#histList` + 事件委托 `data-fill` |
-| 2448–2725 | 句子 / 导入 / 备份 | `renderSentences`(2450)、`showBulk`(2518)、`exportBackup`(2636)、`applyBackup`(2682)、`showImportText`(2709) |
-| 2726–2959 | 设置 / 关于 / 更新 | `renderWinShare`(2728)、`renderWindows`(2754)、`renderSettings`(2771)、`showGuide`(2807)、`resetAll`(2821)、`renderAbout`(2878)、`checkUpdate`(2896) |
-| 2960–3223 | 事件绑定 | `bindEvents`(2961)：所有按钮/输入框监听都在这一个函数里 |
-| 3224–3289 | 启动 | `boot`(3225)（含 `?selftest=1` 分流）、`showSelfTest`(3241) |
+| 32–439 | `<style>` | 主题变量 `--bg/--fg/--accent` + 卡片质感 `--card-shadow`/`--hairline`；`.card`(159)；`.sec-title` + 渐变竖条(167)；`.tabbar` 选中态(318–334)；`.bars` 统计柱（含 `.track`）；`.grid7` 月历格子(378)；底纹 `body::before` / `html[data-decor]`(402–417)；`.floats` 角落 emoji(418)；`.pop` 打卡小动画(420–430) |
+| 451–674 | `<main>` 里的 HTML 视图 | `#view-today`(453)、`#view-checkin`(492)、`#view-sentences`(542)、`#view-settings`(570)；底部 tab(679)；共用遮罩 `#sheetMask`/`#sheetBody`(686)、`#toast`(687)、`#banner`(688)、`#selftest`(693) |
+| 694–1447 | `<script>` ① 纯逻辑区 | `PURE_ENGINE_START`(695) … `PURE_ENGINE_END`(1446)：类目、语料、选句、排程规则、打卡统计、补记/月历纯函数（1334 起）、装饰轮换 `decorOf` / `decorStyle`（1409–1445，含 `runSelfTest()`） |
+| 1449–3413 | `<script>` ② 应用层 | 见下 |
+| 1450–1550 | 存储 / 基础设施 | `LS_KEY='xwlb.v1'`、`defaultState()`(1493)、`loadState()`(1515)、`save()`(1536)、`toast()`(1539)、`openSheet()`(1546)、`closeSheet()`(1550) |
+| 1551–1915 | 通知 / 权限 / 主题 | `beep`、`ensureExactAlarm`(1574)、`ensureChannel`(1596)、`ensureNotifyPermission`(1619)、`refreshDiag`(1727)、`renderPermCard`(1778)、`openSystemPage`(1816)、`applyTheme`(1893) |
+| 1916–2163 | 排程 | `rebuildPlan`(1924)、`tick`(1964)、`mineNotifs`(1988)、`cancelNative`(1991)、`planSig`(2014)、`txtHash`(2024)、`sameAsPlan`(2031)、`renderPending`(2045)、`pushNative`(2059)、`writeNotifs`(2124) |
+| 2164–2288 | 今天页渲染 | `renderCard`(2169)、`rollSentence`(2176)、`renderHints`(2205)、`renderStats`(2241)、`renderTopbar`(2246)、**`renderFloats`(2256，角落图案 + `data-decor`)**、`checkinStreak`(2269)、`switchTab`(2272) |
+| 2289–2361 | 打卡 | `renderCheckin`(2289)、`updateNoteCount`(2310)、`renderTrend`(2314)、`writeRecord`(2334)、`saveMood`(2342) |
+| 2362–2500 | **补记 + 本月格子**（v1.5.0） | `bfDraft`/`bfBackToHist`(2362)、`closeBfSheet`(2364)、`openBackfillSheet`(2368)、`selectBfDay`(2412)、`renderBfPickers`(2431)、`saveBackfill`(2440)、**`bump`(2462，打卡小动画，在切片内)**、`renderMonth`(2472) |
+| 2501–2570 | 全部记录 | `monthKey`(2501)、`showMoodHistory`(2507)：内嵌 `#histList` + 事件委托 `data-fill` |
+| 2571–2848 | 句子 / 导入 / 备份 | `renderSentences`(2571)、`showBulk`(2639)、`exportBackup`(2757)、`applyBackup`(2803)、`showImportText`(2830) |
+| 2849–3081 | 设置 / 关于 / 更新 | `renderWinShare`(2849)、`renderWindows`(2875)、`renderSettings`(2892)、`showGuide`(2928)、`resetAll`(2942)、`renderAbout`(2999)、`checkUpdate`(3017) |
+| 3082–3344 | 事件绑定 | `bindEvents`(3082)：所有按钮/输入框监听都在这一个函数里 |
+| 3345–3415 | 启动 | `boot`(3346)（含 `?selftest=1` 分流）、`showSelfTest`(3363) |
 
 ## 3. 纯逻辑区的契约
 
 - 必须被 `/* ==== PURE_ENGINE_START ==== */` … `/* ==== PURE_ENGINE_END ==== */` 包住。
 - 里面**不许碰** `document` / `window` / `localStorage` / `$()` / `toast()` / `state`；「今天」这类环境信息要当**参数**传进来（例子：`backfillOk(key, todayKey, maxDays)`、`checkinStreakFrom(records, todayKey)`）。
-- 新加的函数 / 常量必须登记进 `scripts/selftest.js` 的 `exported` 数组，否则 `new Function(... 'return {...}')` 取不到它。
+- 新加的函数 / 常量必须登记进 `scripts/selftest.js` 的 `exported` 数组，否则 `new Function(... 'return {...}')` 取不到它（例：`decorOf` / `decorStyle` / `DECOR_SETS` / `DECOR_STYLES` / `FLOAT_SLOTS`）。
+- 装饰这种「按天 / 按周轮换」的规则也属于纯逻辑：日期当参数传进来（`decorOf(key)` / `decorStyle(key)`），**不许用 `Math.random()`**（同一天刷新会变），渲染留给应用层的 `renderFloats()`。
 - 断言写在 `runSelfTest()` 里（纯逻辑区内部），这样浏览器 `mood.html?selftest=1` 和 `node scripts/selftest.js` 跑的是同一份。
 
 ## 4. ⚠️ 锚点字符串（**注释文字和函数签名都不许改**）
@@ -61,8 +62,13 @@
 | `        /* 时段分配规则预览` → `        function renderWindows() {` | `smoke-notify.js` 抽 `renderWinShare` |
 | `        function renderTrend() {` → `        function saveMood() {` | `smoke-notify.js` 抽统计柱 |
 | `        /* 写入一天的打卡记录：今天和补记共用一个入口，补记的带 filled 标记 */` → `        /* 全部打卡记录：可按日期找` | `smoke-backfill.js` 抽补记切片 |
-| `.bars .b .track {`、`flex: 1 1 auto; min-height: 0`、`flex: 0 0 auto; min-height: 4px`、`var PLAN_MAX = 180;`、`function planDays(dailyMax)`、`function slotShare(st)`、`function quietClash(st)`、`function cancelNative()`、`function renderPending()`、`function backfillOk(key, todayKey, maxDays)`、`function checkinStreakFrom(records, todayKey)`、`function monthGrid(offset, records, todayKey, maxDays)`、`function writeRecord(key, mood, tags, note)` | `check.js` 的 `guards`（必需项） |
+| `.bars .b .track {`、`flex: 1 1 auto; min-height: 0`、`flex: 0 0 auto; min-height: 4px`、`var PLAN_MAX = 180;`、`function planDays(dailyMax)`、`function slotShare(st)`、`function quietClash(st)`、`function cancelNative()`、`function renderPending()`、`function backfillOk(key, todayKey, maxDays)`、`function checkinStreakFrom(records, todayKey)`、`function monthGrid(offset, records, todayKey, maxDays)`、`function decorOf(key)`、`function decorStyle(key)`、`function writeRecord(key, mood, tags, note)` | `check.js` 的 `guards`（必需项） |
 | `NATIVE ? 10 : 2`、`slice(0, 48)`、`.bars .b i {`、`wins[i % wins.length]`、`state.records[today] = { mood: draft.mood` | `check.js` 的 `banned`（出现就报错） |
+
+切片沙箱很小，只能看到 `$('id')`（返回一个只有 `textContent` / `innerHTML` / `classList` / `getElementsByTagName` 的假元素）：
+
+- `writeRecord` 锚点 → `全部打卡记录` 锚点之间的代码会被 `smoke-backfill.js` **原样抽走**，所以这段里**不许出现** `document` / `querySelector` / `localStorage` / 真实 DOM 属性；要用就得先判空（例：`bump()` 里 `!el.classList || !el.addEventListener` 直接 return）。
+- 想被切片代码调用的新函数，必须定义在这一段里（例：`bump()` 放在 `saveBackfill()` 之后），否则切片里会是 `ReferenceError`。
 
 ## 5. 数据与存储
 
